@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { appConfig } from '@/config/app.config';
 import { Button } from '@/components/ui/button';
@@ -41,7 +43,7 @@ interface ChatMessage {
   };
 }
 
-export default function AISandboxPage() {
+function AISandboxPageInner() {
   const [sandboxData, setSandboxData] = useState<SandboxData | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ text: 'Not connected', active: false });
@@ -2724,263 +2726,263 @@ Focus on the key sections and content, making it clean and modern.`;
   };
 
   return (
-    <div className="font-sans bg-[#030b11] text-white h-screen flex flex-col">
-      {/* Home Screen Overlay */}
-      {showHomeScreen && (
-        <div className={`fixed inset-0 z-50 transition-opacity duration-500 ${homeScreenFading ? 'opacity-0' : 'opacity-100'}`}>
-          {/* Neon Teal Hologram Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#07121b] via-[#030b11] to-black overflow-hidden">
-            {/* Outer holographic glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1100px] h-[1100px] bg-gradient-radial from-teal-400/25 via-cyan-300/15 to-transparent rounded-full blur-[120px]" />
-            {/* Core pulse */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-gradient-radial from-cyan-300/40 via-teal-400/30 to-transparent rounded-full blur-[80px] animate-[sunPulse_4s_ease-in-out_infinite_0.3s]" />
-            {/* Floor reflection */}
-            <div className="absolute bottom-0 left-1/2 w-[900px] h-[900px]" style={{ transform: 'translateX(-50%) translateY(45%)' }}>
-            <div className="relative w-full h-full">
-              <div className="absolute inset-0 bg-teal-500/20 rounded-full blur-[110px] opacity-30 animate-pulse"></div>
-              <div className="absolute inset-16 bg-cyan-400/25 rounded-full blur-[90px] opacity-40 animate-pulse" style={{ animationDelay: '0.25s' }}></div>
-              <div className="absolute inset-32 bg-emerald-400/30 rounded-full blur-[70px] opacity-50 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-              <div className="absolute inset-48 bg-cyan-300/40 rounded-full blur-[50px] opacity-60"></div>
-              </div>
-            </div>
-          </div>
-          
-          
-          {/* Close button on hover */}
-          <button
-            onClick={() => {
-              setHomeScreenFading(true);
-              setTimeout(() => {
-                setShowHomeScreen(false);
-                setHomeScreenFading(false);
-              }, 500);
-            }}
-            className="absolute top-8 right-8 text-gray-500 hover:text-gray-700 transition-all duration-300 opacity-0 hover:opacity-100 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-sm"
-            style={{ opacity: 0 }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-          >
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          {/* Header */}
-          <div className="absolute top-0 left-0 right-0 z-20 px-6 py-4 flex items-center justify-between animate-[fadeIn_0.8s_ease-out]">
-            <div className="flex items-center gap-3">
-              <svg viewBox="0 0 24 24" className="h-8 w-8 text-teal-300 drop-shadow-[0_0_12px_rgba(45,212,191,0.45)]" aria-hidden="true">
-                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2.5" fill="none" />
-                <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.75" fill="rgba(13,148,136,0.35)" />
-                <ellipse cx="12" cy="16.5" rx="7" ry="2.25" fill="currentColor" opacity="0.25" />
-              </svg>
-              <span className="text-teal-200/90 font-semibold text-lg tracking-tight">HoloWeb</span>
-              <span className="sr-only">HoloWeb</span>
-            </div>
-            {/* Removed GitHub link per rebrand */}
-            <div />
-          </div>
-          
-          {/* Main content */}
-          <div className="relative z-10 h-full flex items-center justify-center px-4">
-            <div className="text-center max-w-4xl min-w-[600px] mx-auto">
-              {/* Firecrawl-style Header */}
-              <div className="text-center text-teal-100">
-                <h1 className="text-[2.5rem] lg:text-[3.8rem] text-center text-teal-200/90 font-semibold tracking-tight leading-[0.9] animate-[fadeIn_0.8s_ease-out]">
-                  <span className="hidden md:inline">HoloWeb</span>
-                  <span className="md:hidden">HoloWeb</span>
-                </h1>
-                <motion.p 
-                  className="text-base lg:text-lg max-w-lg mx-auto mt-2.5 text-teal-100/70 text-center text-balance"
-                  animate={{
-                    opacity: showStyleSelector ? 0.7 : 1
-                  }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                >
-                  Re-imagine any website, in seconds.
-                </motion.p>
-              </div>
-              
-              <form onSubmit={handleHomeScreenSubmit} className="mt-5 max-w-3xl mx-auto">
-                <div className="w-full relative group">
-                  <input
-                    type="text"
-                    value={homeUrlInput}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setHomeUrlInput(value);
-                      
-                      // Check if it's a valid domain
-                      const domainRegex = /^(https?:\/\/)?(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(\/?.*)?$/;
-                      if (domainRegex.test(value) && value.length > 5) {
-                        // Small delay to make the animation feel smoother
-                        setTimeout(() => setShowStyleSelector(true), 100);
-                      } else {
-                        setShowStyleSelector(false);
-                        setSelectedStyle(null);
-                      }
-                    }}
-                    placeholder=" "
-                    aria-placeholder="https://your-site.com"
-                    className="h-[3.25rem] w-full resize-none focus-visible:outline-none focus-visible:ring-teal-400 focus-visible:ring-2 rounded-[18px] text-sm text-white px-4 pr-12 border-[.75px] border-white/10 bg-white/10 backdrop-blur-md placeholder:text-white/40"
-                    style={{
-                      boxShadow: '0 0 0 1px rgba(45,212,191,.25), 0 1px 2px rgba(0,0,0,.2), 0 10px 30px rgba(13,148,136,.25)',
-                      filter: 'drop-shadow(0px 0px 18px rgba(45,212,191,0.25))'
-                    }}
-                    autoFocus
-                  />
-                  <div 
-                    aria-hidden="true" 
-                    className={`absolute top-1/2 -translate-y-1/2 left-4 pointer-events-none text-sm text-opacity-50 text-start transition-opacity ${
-                      homeUrlInput ? 'opacity-0' : 'opacity-100'
-                    }`}
-                  >
-                    <span className="text-teal-100/50" style={{ fontFamily: 'monospace' }}>
-                      https://your-site.com
-                    </span>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={!homeUrlInput.trim()}
-                    className="absolute top-1/2 transform -translate-y-1/2 right-2 flex h-10 items-center justify-center rounded-md px-3 text-sm font-medium text-teal-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    title={selectedStyle ? `Clone with ${selectedStyle} Style` : 'Clone Website'}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                      <polyline points="9 10 4 15 9 20"></polyline>
-                      <path d="M20 4v7a4 4 0 0 1-4 4H4"></path>
-                    </svg>
-                  </button>
+      <div className="font-sans bg-[#030b11] text-white h-screen flex flex-col">
+        {/* Home Screen Overlay */}
+        {showHomeScreen && (
+          <div className={`fixed inset-0 z-50 transition-opacity duration-500 ${homeScreenFading ? 'opacity-0' : 'opacity-100'}`}>
+            {/* Neon Teal Hologram Background */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#07121b] via-[#030b11] to-black overflow-hidden">
+              {/* Outer holographic glow */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1100px] h-[1100px] bg-gradient-radial from-teal-400/25 via-cyan-300/15 to-transparent rounded-full blur-[120px]" />
+              {/* Core pulse */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-gradient-radial from-cyan-300/40 via-teal-400/30 to-transparent rounded-full blur-[80px] animate-[sunPulse_4s_ease-in-out_infinite_0.3s]" />
+              {/* Floor reflection */}
+              <div className="absolute bottom-0 left-1/2 w-[900px] h-[900px]" style={{ transform: 'translateX(-50%) translateY(45%)' }}>
+              <div className="relative w-full h-full">
+                <div className="absolute inset-0 bg-teal-500/20 rounded-full blur-[110px] opacity-30 animate-pulse"></div>
+                <div className="absolute inset-16 bg-cyan-400/25 rounded-full blur-[90px] opacity-40 animate-pulse" style={{ animationDelay: '0.25s' }}></div>
+                <div className="absolute inset-32 bg-emerald-400/30 rounded-full blur-[70px] opacity-50 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                <div className="absolute inset-48 bg-cyan-300/40 rounded-full blur-[50px] opacity-60"></div>
                 </div>
-                  
-                  {/* Style Selector - Slides out when valid domain is entered */}
-                  {showStyleSelector && (
-                    <div className="overflow-hidden mt-4">
-                      <div className={`transition-all duration-500 ease-out transform ${
-                        showStyleSelector ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
-                      }`}>
-                    <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-[0_0_40px_rgba(45,212,191,0.15)]">
-                      <p className="text-sm text-teal-50/80 mb-3 font-medium">How do you want your site to look?</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        {[
-                          { name: 'Neobrutalist', description: 'Bold colors, thick borders' },
-                          { name: 'Glassmorphism', description: 'Frosted glass effects' },
-                          { name: 'Minimalist', description: 'Clean and simple' },
-                          { name: 'Dark Mode', description: 'Dark theme' },
-                          { name: 'Gradient', description: 'Colorful gradients' },
-                          { name: 'Retro', description: '80s/90s aesthetic' },
-                          { name: 'Modern', description: 'Contemporary design' },
-                          { name: 'Monochrome', description: 'Black and white' },
-                          { name: 'Neon Teal', description: 'HoloWeb default' }
-                        ].map((style) => (
-                          <button
-                            key={style.name}
-                            type="button"
+              </div>
+            </div>
+            
+            
+            {/* Close button on hover */}
+            <button
+              onClick={() => {
+                setHomeScreenFading(true);
+                setTimeout(() => {
+                  setShowHomeScreen(false);
+                  setHomeScreenFading(false);
+                }, 500);
+              }}
+              className="absolute top-8 right-8 text-gray-500 hover:text-gray-700 transition-all duration-300 opacity-0 hover:opacity-100 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-sm"
+              style={{ opacity: 0 }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+            >
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 z-20 px-6 py-4 flex items-center justify-between animate-[fadeIn_0.8s_ease-out]">
+              <div className="flex items-center gap-3">
+                <svg viewBox="0 0 24 24" className="h-8 w-8 text-teal-300 drop-shadow-[0_0_12px_rgba(45,212,191,0.45)]" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                  <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.75" fill="rgba(13,148,136,0.35)" />
+                  <ellipse cx="12" cy="16.5" rx="7" ry="2.25" fill="currentColor" opacity="0.25" />
+                </svg>
+                <span className="text-teal-200/90 font-semibold text-lg tracking-tight">HoloWeb</span>
+                <span className="sr-only">HoloWeb</span>
+              </div>
+              {/* Removed GitHub link per rebrand */}
+              <div />
+            </div>
+            
+            {/* Main content */}
+            <div className="relative z-10 h-full flex items-center justify-center px-4">
+              <div className="text-center max-w-4xl min-w-[600px] mx-auto">
+                {/* Firecrawl-style Header */}
+                <div className="text-center text-teal-100">
+                  <h1 className="text-[2.5rem] lg:text-[3.8rem] text-center text-teal-200/90 font-semibold tracking-tight leading-[0.9] animate-[fadeIn_0.8s_ease-out]">
+                    <span className="hidden md:inline">HoloWeb</span>
+                    <span className="md:hidden">HoloWeb</span>
+                  </h1>
+                  <motion.p 
+                    className="text-base lg:text-lg max-w-lg mx-auto mt-2.5 text-teal-100/70 text-center text-balance"
+                    animate={{
+                      opacity: showStyleSelector ? 0.7 : 1
+                    }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    Re-imagine any website, in seconds.
+                  </motion.p>
+                </div>
+                
+                <form onSubmit={handleHomeScreenSubmit} className="mt-5 max-w-3xl mx-auto">
+                  <div className="w-full relative group">
+                    <input
+                      type="text"
+                      value={homeUrlInput}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setHomeUrlInput(value);
+                        
+                        // Check if it's a valid domain
+                        const domainRegex = /^(https?:\/\/)?(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(\/?.*)?$/;
+                        if (domainRegex.test(value) && value.length > 5) {
+                          // Small delay to make the animation feel smoother
+                          setTimeout(() => setShowStyleSelector(true), 100);
+                        } else {
+                          setShowStyleSelector(false);
+                          setSelectedStyle(null);
+                        }
+                      }}
+                      placeholder=" "
+                      aria-placeholder="https://your-site.com"
+                      className="h-[3.25rem] w-full resize-none focus-visible:outline-none focus-visible:ring-teal-400 focus-visible:ring-2 rounded-[18px] text-sm text-white px-4 pr-12 border-[.75px] border-white/10 bg-white/10 backdrop-blur-md placeholder:text-white/40"
+                      style={{
+                        boxShadow: '0 0 0 1px rgba(45,212,191,.25), 0 1px 2px rgba(0,0,0,.2), 0 10px 30px rgba(13,148,136,.25)',
+                        filter: 'drop-shadow(0px 0px 18px rgba(45,212,191,0.25))'
+                      }}
+                      autoFocus
+                    />
+                    <div 
+                      aria-hidden="true" 
+                      className={`absolute top-1/2 -translate-y-1/2 left-4 pointer-events-none text-sm text-opacity-50 text-start transition-opacity ${
+                        homeUrlInput ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    >
+                      <span className="text-teal-100/50" style={{ fontFamily: 'monospace' }}>
+                        https://your-site.com
+                      </span>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={!homeUrlInput.trim()}
+                      className="absolute top-1/2 transform -translate-y-1/2 right-2 flex h-10 items-center justify-center rounded-md px-3 text-sm font-medium text-teal-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title={selectedStyle ? `Clone with ${selectedStyle} Style` : 'Clone Website'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                        <polyline points="9 10 4 15 9 20"></polyline>
+                        <path d="M20 4v7a4 4 0 0 1-4 4H4"></path>
+                      </svg>
+                    </button>
+                  </div>
+                    
+                    {/* Style Selector - Slides out when valid domain is entered */}
+                    {showStyleSelector && (
+                      <div className="overflow-hidden mt-4">
+                        <div className={`transition-all duration-500 ease-out transform ${
+                          showStyleSelector ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
+                        }`}>
+                      <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-[0_0_40px_rgba(45,212,191,0.15)]">
+                        <p className="text-sm text-teal-50/80 mb-3 font-medium">How do you want your site to look?</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {[
+                            { name: 'Neobrutalist', description: 'Bold colors, thick borders' },
+                            { name: 'Glassmorphism', description: 'Frosted glass effects' },
+                            { name: 'Minimalist', description: 'Clean and simple' },
+                            { name: 'Dark Mode', description: 'Dark theme' },
+                            { name: 'Gradient', description: 'Colorful gradients' },
+                            { name: 'Retro', description: '80s/90s aesthetic' },
+                            { name: 'Modern', description: 'Contemporary design' },
+                            { name: 'Monochrome', description: 'Black and white' },
+                            { name: 'Neon Teal', description: 'HoloWeb default' }
+                          ].map((style) => (
+                            <button
+                              key={style.name}
+                              type="button"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  // Submit the form
+                                  const form = e.currentTarget.closest('form');
+                                  if (form) {
+                                    form.requestSubmit();
+                                  }
+                                }
+                              }}
+                              onClick={() => {
+                                if (selectedStyle === style.name) {
+                                  // Deselect if clicking the same style
+                                  setSelectedStyle(null);
+                                  // Keep only additional context, remove the style theme part
+                                  const currentAdditional = homeContextInput.replace(/^[^,]+theme\s*,?\s*/, '').trim();
+                                  setHomeContextInput(currentAdditional);
+                                } else {
+                                  // Select new style
+                                  setSelectedStyle(style.name);
+                                  // Extract any additional context (everything after the style theme)
+                                  const currentAdditional = homeContextInput.replace(/^[^,]+theme\s*,?\s*/, '').trim();
+                                  setHomeContextInput(style.name.toLowerCase() + ' theme' + (currentAdditional ? ', ' + currentAdditional : ''));
+                                }
+                              }}
+                              className={`p-3 rounded-lg border transition-all backdrop-blur-md ${
+                                selectedStyle === style.name
+                                  ? 'border-teal-400/70 bg-teal-400/10 text-teal-100 shadow-[0_0_0_1px_rgba(45,212,191,0.35)]'
+                                  : 'border-white/10 bg-white/5 hover:border-teal-300/40 hover:bg-teal-300/10 text-white/80'
+                              }`}
+                            >
+                              <div className="text-sm font-medium">{style.name}</div>
+                              <div className="text-xs text-white/60 mt-1">{style.description}</div>
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* Additional context input - part of the style selector */}
+                        <div className="mt-4 mb-2">
+                          <input
+                            type="text"
+                            value={(() => {
+                              if (!selectedStyle) return homeContextInput;
+                              // Extract additional context by removing the style theme part
+                              const additional = homeContextInput.replace(new RegExp('^' + selectedStyle.toLowerCase() + ' theme\\s*,?\\s*', 'i'), '');
+                              return additional;
+                            })()}
+                            onChange={(e) => {
+                              const additionalContext = e.target.value;
+                              if (selectedStyle) {
+                                setHomeContextInput(selectedStyle.toLowerCase() + ' theme' + (additionalContext.trim() ? ', ' + additionalContext : ''));
+                              } else {
+                                setHomeContextInput(additionalContext);
+                              }
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
-                                e.stopPropagation();
-                                // Submit the form
                                 const form = e.currentTarget.closest('form');
                                 if (form) {
                                   form.requestSubmit();
                                 }
                               }
                             }}
-                            onClick={() => {
-                              if (selectedStyle === style.name) {
-                                // Deselect if clicking the same style
-                                setSelectedStyle(null);
-                                // Keep only additional context, remove the style theme part
-                                const currentAdditional = homeContextInput.replace(/^[^,]+theme\s*,?\s*/, '').trim();
-                                setHomeContextInput(currentAdditional);
-                              } else {
-                                // Select new style
-                                setSelectedStyle(style.name);
-                                // Extract any additional context (everything after the style theme)
-                                const currentAdditional = homeContextInput.replace(/^[^,]+theme\s*,?\s*/, '').trim();
-                                setHomeContextInput(style.name.toLowerCase() + ' theme' + (currentAdditional ? ', ' + currentAdditional : ''));
-                              }
-                            }}
-                            className={`p-3 rounded-lg border transition-all backdrop-blur-md ${
-                              selectedStyle === style.name
-                                ? 'border-teal-400/70 bg-teal-400/10 text-teal-100 shadow-[0_0_0_1px_rgba(45,212,191,0.35)]'
-                                : 'border-white/10 bg-white/5 hover:border-teal-300/40 hover:bg-teal-300/10 text-white/80'
-                            }`}
-                          >
-                            <div className="text-sm font-medium">{style.name}</div>
-                            <div className="text-xs text-white/60 mt-1">{style.description}</div>
-                          </button>
-                        ))}
+                            placeholder="Add more details: specific features, color preferences..."
+                            className="w-full px-4 py-2 text-sm bg-white/10 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-teal-400/60 focus:ring-2 focus:ring-teal-300/20 transition-all duration-200 backdrop-blur-md"
+                          />
+                        </div>
                       </div>
-                      
-                      {/* Additional context input - part of the style selector */}
-                      <div className="mt-4 mb-2">
-                        <input
-                          type="text"
-                          value={(() => {
-                            if (!selectedStyle) return homeContextInput;
-                            // Extract additional context by removing the style theme part
-                            const additional = homeContextInput.replace(new RegExp('^' + selectedStyle.toLowerCase() + ' theme\\s*,?\\s*', 'i'), '');
-                            return additional;
-                          })()}
-                          onChange={(e) => {
-                            const additionalContext = e.target.value;
-                            if (selectedStyle) {
-                              setHomeContextInput(selectedStyle.toLowerCase() + ' theme' + (additionalContext.trim() ? ', ' + additionalContext : ''));
-                            } else {
-                              setHomeContextInput(additionalContext);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              const form = e.currentTarget.closest('form');
-                              if (form) {
-                                form.requestSubmit();
-                              }
-                            }
-                          }}
-                          placeholder="Add more details: specific features, color preferences..."
-                          className="w-full px-4 py-2 text-sm bg-white/10 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-teal-400/60 focus:ring-2 focus:ring-teal-300/20 transition-all duration-200 backdrop-blur-md"
-                        />
+                        </div>
                       </div>
-                    </div>
-                      </div>
-                    </div>
-                  )}
-              </form>
-              
-              {/* Model Selector */}
-              <div className="mt-6 flex items-center justify-center animate-[fadeIn_1s_ease-out]">
-                <select
-                  value={aiModel}
-                  onChange={(e) => {
-                    const newModel = e.target.value;
-                    setAiModel(newModel);
-                    const params = new URLSearchParams(searchParams);
-                    params.set('model', newModel);
-                    if (sandboxData?.sandboxId) {
-                      params.set('sandbox', sandboxData.sandboxId);
-                    }
-                    router.push(`/?${params.toString()}`);
-                  }}
-                  className="px-3 py-1.5 text-sm bg-white text-black border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
-                  style={{
-                    boxShadow: '0 0 0 1px #e3e1de66, 0 1px 2px #5f4a2e14'
-                  }}
-                >
-                  {appConfig.ai.availableModels.map(model => (
-                    <option key={model} value={model} className="text-black">
-                      {appConfig.ai.modelDisplayNames[model as keyof typeof appConfig.ai.modelDisplayNames] || model}
-                    </option>
-                  ))}
-                </select>
+                    )}
+                </form>
+                
+                {/* Model Selector */}
+                <div className="mt-6 flex items-center justify-center animate-[fadeIn_1s_ease-out]">
+                  <select
+                    value={aiModel}
+                    onChange={(e) => {
+                      const newModel = e.target.value;
+                      setAiModel(newModel);
+                      const params = new URLSearchParams(searchParams);
+                      params.set('model', newModel);
+                      if (sandboxData?.sandboxId) {
+                        params.set('sandbox', sandboxData.sandboxId);
+                      }
+                      router.push(`/?${params.toString()}`);
+                    }}
+                    className="px-3 py-1.5 text-sm bg-white text-black border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
+                    style={{
+                      boxShadow: '0 0 0 1px #e3e1de66, 0 1px 2px #5f4a2e14'
+                    }}
+                  >
+                    {appConfig.ai.availableModels.map(model => (
+                      <option key={model} value={model} className="text-black">
+                        {appConfig.ai.modelDisplayNames[model as keyof typeof appConfig.ai.modelDisplayNames] || model}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-      
-      <div className="bg-black/40 backdrop-blur-md px-4 py-4 border-b border-white/10 flex items-center justify-between">
+        )}
+        
+        <div className="bg-black/40 backdrop-blur-md px-4 py-4 border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
             <svg viewBox="0 0 24 24" className="h-8 w-8 text-teal-300 drop-shadow-[0_0_12px_rgba(45,212,191,0.45)]" aria-hidden="true">
@@ -3403,10 +3405,14 @@ Focus on the key sections and content, making it clean and modern.`;
           </div>
         </div>
       </div>
-
-
-
-
     </div>
+  );
+}
+
+export default function AISandboxPage() {
+  return (
+    <Suspense fallback={null}>
+      <AISandboxPageInner />
+    </Suspense>
   );
 }
