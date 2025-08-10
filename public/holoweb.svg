@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="g1" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#67e8f9" stop-opacity="0.95"/>
+      <stop offset="60%" stop-color="#2dd4bf" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#2dd4bf"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#g1)"/>
+  <g filter="url(#f1)">
+    <path d="M128 256c0-70.692 57.308-128 128-128s128 57.308 128 128-57.308 128-128 128S128 326.692 128 256Z" fill="none" stroke="url(#stroke)" stroke-width="28" stroke-linecap="round"/>
+    <path d="M176 256c0-44.183 35.817-80 80-80s80 35.817 80 80-35.817 80-80 80-80-35.817-80-80Z" fill="none" stroke="url(#stroke)" stroke-width="18" stroke-linecap="round" opacity="0.9"/>
+    <path d="M208 256c0-26.51 21.49-48 48-48s48 21.49 48 48-21.49 48-48 48-48-21.49-48-48Z" fill="#0d9488" fill-opacity="0.35"/>
+  </g>
+  <defs>
+    <filter id="f1" x="0" y="0" width="512" height="512" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+</svg>
+

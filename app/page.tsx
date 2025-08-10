@@ -12,7 +12,6 @@ import {
   FiFile, 
   FiChevronRight, 
   FiChevronDown,
-  FiGithub,
   BsFolderFill, 
   BsFolder2Open,
   SiJavascript, 
@@ -119,7 +118,7 @@ export default function AISandboxPage() {
     thinkingText?: string;
     thinkingDuration?: number;
     currentFile?: { path: string; content: string; type: string };
-    files: Array<{ path: string; content: string; type: string; completed: boolean }>;
+    files: Array<{ path: string; content: string; type: string; completed: boolean; edited?: boolean }>;
     lastProcessedPosition: number;
     isEdit?: boolean;
   }>({
@@ -516,7 +515,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                   } else if (data.message.includes('Creating files') || data.message.includes('Applying')) {
                     setCodeApplicationState({ 
                       stage: 'applying',
-                      filesGenerated: results.filesCreated 
+                      filesGenerated: data.filesCreated || []
                     });
                   }
                   break;
@@ -606,7 +605,8 @@ Tip: I automatically detect and install npm packages from your code imports (lik
       
       // Process final data
       if (finalData && finalData.type === 'complete') {
-        const data = {
+        const data: any = {
+          ...finalData,
           success: true,
           results: finalData.results,
           explanation: finalData.explanation,
@@ -692,7 +692,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
           log(data.warning, 'error');
           
           if (data.missingImports && data.missingImports.length > 0) {
-            const missingList = data.missingImports.join(', ');
+            const missingList = (data as any).missingImports.join(', ');
             addChatMessage(
               `Ask me to "create the missing components: ${missingList}" to fix these import errors.`,
               'system'
@@ -702,7 +702,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
         
         log('Code applied successfully!');
         console.log('[applyGeneratedCode] Response data:', data);
-        console.log('[applyGeneratedCode] Debug info:', data.debug);
+        console.log('[applyGeneratedCode] Debug info:', (data as any).debug);
         console.log('[applyGeneratedCode] Current sandboxData:', sandboxData);
         console.log('[applyGeneratedCode] Current iframe element:', iframeRef.current);
         console.log('[applyGeneratedCode] Current iframe src:', iframeRef.current?.src);
@@ -956,11 +956,11 @@ Tip: I automatically detect and install npm packages from your code imports (lik
     if (activeTab === 'generation' && (generationProgress.isGenerating || generationProgress.files.length > 0)) {
       return (
         /* Generation Tab Content */
-        <div className="absolute inset-0 flex overflow-hidden">
+        <div className="absolute inset-0 flex overflow-hidden bg-[#0b1117]">
           {/* File Explorer - Hide during edits */}
           {!generationProgress.isEdit && (
-            <div className="w-[250px] border-r border-gray-200 bg-white flex flex-col flex-shrink-0">
-            <div className="p-3 bg-gray-100 text-gray-900 flex items-center justify-between">
+            <div className="w-[250px] border-r border-white/10 bg-[#0b1117] flex flex-col flex-shrink-0">
+            <div className="p-3 bg-white/5 text-teal-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <BsFolderFill className="w-4 h-4" />
                 <span className="text-sm font-medium">Explorer</span>
@@ -972,7 +972,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
               <div className="text-sm">
                 {/* Root app folder */}
                 <div 
-                  className="flex items-center gap-1 py-1 px-2 hover:bg-gray-100 rounded cursor-pointer text-gray-700"
+                  className="flex items-center gap-1 py-1 px-2 hover:bg-white/5 rounded cursor-pointer text-teal-100/80"
                   onClick={() => toggleFolder('app')}
                 >
                   {expandedFolders.has('app') ? (
@@ -985,7 +985,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                   ) : (
                     <BsFolderFill className="w-4 h-4 text-blue-500" />
                   )}
-                  <span className="font-medium text-gray-800">app</span>
+                     <span className="font-medium text-teal-100">app</span>
                 </div>
                 
                 {expandedFolders.has('app') && (
@@ -1002,7 +1002,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                       );
                       
                       // Process all files from generation progress
-                      generationProgress.files.forEach(file => {
+                      generationProgress.files.forEach((file: { path: string; content: string; type: string; completed: boolean; edited?: boolean }) => {
                         const parts = file.path.split('/');
                         const dir = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
                         const fileName = parts[parts.length - 1];
@@ -1018,7 +1018,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                         <div key={dir} className="mb-1">
                           {dir && (
                             <div 
-                              className="flex items-center gap-1 py-1 px-2 hover:bg-gray-100 rounded cursor-pointer text-gray-700"
+                             className="flex items-center gap-1 py-1 px-2 hover:bg-white/5 rounded cursor-pointer text-teal-100/80"
                               onClick={() => toggleFolder(dir)}
                             >
                               {expandedFolders.has(dir) ? (
@@ -1031,7 +1031,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                               ) : (
                                 <BsFolderFill className="w-4 h-4 text-yellow-600" />
                               )}
-                              <span className="text-gray-700">{dir.split('/').pop()}</span>
+                               <span className="text-teal-100/90">{dir.split('/').pop()}</span>
                             </div>
                           )}
                           {(!dir || expandedFolders.has(dir)) && (
@@ -1043,11 +1043,11 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                                 return (
                                   <div 
                                     key={fullPath} 
-                                    className={`flex items-center gap-2 py-1 px-2 rounded cursor-pointer transition-all ${
-                                      isSelected 
-                                        ? 'bg-blue-500 text-white' 
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
+                                     className={`flex items-center gap-2 py-1 px-2 rounded cursor-pointer transition-all ${
+                                       isSelected 
+                                         ? 'bg-teal-600/40 text-white' 
+                                         : 'text-teal-100/80 hover:bg-white/5'
+                                     }`}
                                     onClick={() => handleFileClick(fullPath)}
                                   >
                                     {getFileIcon(fileInfo.name)}
@@ -1110,7 +1110,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                 {/* Show selected file if one is selected */}
                 {selectedFile ? (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="bg-black border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                      <div className="bg-[#0b1117] border border-white/10 rounded-lg overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.3)]">
                       <div className="px-4 py-2 bg-[#36322F] text-white flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {getFileIcon(selectedFile)}
@@ -1125,7 +1125,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                           </svg>
                         </button>
                       </div>
-                      <div className="bg-gray-900 border border-gray-700 rounded">
+                       <div className="bg-[#0f1720] border border-white/10 rounded">
                         <SyntaxHighlighter
                           language={(() => {
                             const ext = selectedFile.split('.').pop()?.toLowerCase();
@@ -1169,14 +1169,14 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-black border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="px-4 py-2 bg-gray-100 text-gray-900 flex items-center justify-between">
+                    <div className="bg-[#0b1117] border border-white/10 rounded-lg overflow-hidden">
+                      <div className="px-4 py-2 bg-white/5 text-teal-50 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
                           <span className="font-mono text-sm">Streaming code...</span>
                         </div>
                       </div>
-                      <div className="p-4 bg-gray-900 rounded">
+                       <div className="p-4 bg-[#0f1720] rounded">
                         <SyntaxHighlighter
                           language="jsx"
                           style={vscDarkPlus}
@@ -1190,7 +1190,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                         >
                           {generationProgress.streamedCode || 'Starting code generation...'}
                         </SyntaxHighlighter>
-                        <span className="inline-block w-2 h-4 bg-orange-400 ml-1 animate-pulse" />
+                    <span className="inline-block w-2 h-4 bg-teal-300 ml-1 animate-pulse" />
                       </div>
                     </div>
                   )
@@ -1198,8 +1198,8 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                   <div className="space-y-4">
                     {/* Show current file being generated */}
                     {generationProgress.currentFile && (
-                      <div className="bg-black border-2 border-gray-400 rounded-lg overflow-hidden shadow-sm">
-                        <div className="px-4 py-2 bg-[#36322F] text-white flex items-center justify-between">
+                       <div className="bg-[#0b1117] border-2 border-white/10 rounded-lg overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.3)]">
+                         <div className="px-4 py-2 bg-white/5 text-teal-50 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             <span className="font-mono text-sm">{generationProgress.currentFile.path}</span>
@@ -1213,7 +1213,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                             </span>
                           </div>
                         </div>
-                        <div className="bg-gray-900 border border-gray-700 rounded">
+                         <div className="bg-[#0f1720] border border-white/10 rounded">
                           <SyntaxHighlighter
                             language={
                               generationProgress.currentFile.type === 'css' ? 'css' :
@@ -1341,7 +1341,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
       // Show screenshot when we have one and (loading OR generating OR no sandbox yet)
       if (urlScreenshot && (loading || generationProgress.isGenerating || !sandboxData?.url || isPreparingDesign)) {
         return (
-          <div className="relative w-full h-full bg-gray-100">
+          <div className="relative w-full h-full bg-[#0b1117]">
             <img 
               src={urlScreenshot} 
               alt="Website preview" 
@@ -1349,9 +1349,9 @@ Tip: I automatically detect and install npm packages from your code imports (lik
             />
             {(generationProgress.isGenerating || isPreparingDesign) && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <div className="text-center bg-black/70 rounded-lg p-6 backdrop-blur-sm">
+                   <div className="text-center bg-black/60 border border-white/10 text-teal-50 rounded-lg p-6 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.35)]">
                   <div className="w-12 h-12 border-3 border-gray-300 border-t-white rounded-full animate-spin mx-auto mb-3" />
-                  <p className="text-white text-sm font-medium">
+                   <p className="text-teal-100 text-sm font-medium">
                     {generationProgress.isGenerating ? 'Generating code...' : `Preparing your design for ${targetUrl}...`}
                   </p>
                 </div>
@@ -1365,17 +1365,17 @@ Tip: I automatically detect and install npm packages from your code imports (lik
       // Don't show loading overlay for edits
       if (loadingStage || (generationProgress.isGenerating && !generationProgress.isEdit)) {
         return (
-          <div className="relative w-full h-full bg-gray-50 flex items-center justify-center">
-            <div className="text-center">
-              <div className="mb-8">
-                <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+          <div className="relative w-full h-full bg-[#0b1117] flex items-center justify-center">
+                     <div className="text-center text-teal-100">
+                       <div className="mb-8">
+                         <div className="w-16 h-16 border-4 border-teal-900/40 border-t-teal-400 rounded-full animate-spin mx-auto"></div>
+                       </div>
+                       <h3 className="text-xl font-semibold text-teal-100 mb-2">
                 {loadingStage === 'gathering' && 'Gathering website information...'}
                 {loadingStage === 'planning' && 'Planning your design...'}
                 {(loadingStage === 'generating' || generationProgress.isGenerating) && 'Generating your application...'}
               </h3>
-              <p className="text-gray-600 text-sm">
+               <p className="text-teal-200/70 text-sm">
                 {loadingStage === 'gathering' && 'Analyzing the website structure and content'}
                 {loadingStage === 'planning' && 'Creating the optimal React component architecture'}
                 {(loadingStage === 'generating' || generationProgress.isGenerating) && 'Writing clean, modern code for your app'}
@@ -1420,10 +1420,10 @@ Tip: I automatically detect and install npm packages from your code imports (lik
       // Show loading animation when capturing screenshot
       if (isCapturingScreenshot) {
         return (
-          <div className="flex items-center justify-center h-full bg-gray-900">
+          <div className="flex items-center justify-center h-full bg-[#0b1117]">
             <div className="text-center">
               <div className="w-12 h-12 border-3 border-gray-600 border-t-white rounded-full animate-spin mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white">Gathering website information</h3>
+              <h3 className="text-lg font-medium text-teal-100">Gathering website information</h3>
             </div>
           </div>
         );
@@ -2724,28 +2724,23 @@ Focus on the key sections and content, making it clean and modern.`;
   };
 
   return (
-    <div className="font-sans bg-background text-foreground h-screen flex flex-col">
+    <div className="font-sans bg-[#030b11] text-white h-screen flex flex-col">
       {/* Home Screen Overlay */}
       {showHomeScreen && (
         <div className={`fixed inset-0 z-50 transition-opacity duration-500 ${homeScreenFading ? 'opacity-0' : 'opacity-100'}`}>
-          {/* Simple Sun Gradient Background */}
-          <div className="absolute inset-0 bg-white overflow-hidden">
-            {/* Main Sun - Pulsing */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-orange-400/50 via-orange-300/30 to-transparent rounded-full blur-[80px] animate-[sunPulse_4s_ease-in-out_infinite]" />
-            
-            {/* Inner Sun Core - Brighter */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-radial from-yellow-300/40 via-orange-400/30 to-transparent rounded-full blur-[40px] animate-[sunPulse_4s_ease-in-out_infinite_0.5s]" />
-            
-            {/* Outer Glow - Subtle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px] bg-gradient-radial from-orange-200/20 to-transparent rounded-full blur-[120px]" />
-            
-            {/* Giant Glowing Orb - Center Bottom */}
-            <div className="absolute bottom-0 left-1/2 w-[800px] h-[800px] animate-[orbShrink_3s_ease-out_forwards]" style={{ transform: 'translateX(-50%) translateY(45%)' }}>
-              <div className="relative w-full h-full">
-                <div className="absolute inset-0 bg-orange-600 rounded-full blur-[100px] opacity-30 animate-pulse"></div>
-                <div className="absolute inset-16 bg-orange-500 rounded-full blur-[80px] opacity-40 animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                <div className="absolute inset-32 bg-orange-400 rounded-full blur-[60px] opacity-50 animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                <div className="absolute inset-48 bg-yellow-300 rounded-full blur-[40px] opacity-60"></div>
+          {/* Neon Teal Hologram Background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#07121b] via-[#030b11] to-black overflow-hidden">
+            {/* Outer holographic glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1100px] h-[1100px] bg-gradient-radial from-teal-400/25 via-cyan-300/15 to-transparent rounded-full blur-[120px]" />
+            {/* Core pulse */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-gradient-radial from-cyan-300/40 via-teal-400/30 to-transparent rounded-full blur-[80px] animate-[sunPulse_4s_ease-in-out_infinite_0.3s]" />
+            {/* Floor reflection */}
+            <div className="absolute bottom-0 left-1/2 w-[900px] h-[900px]" style={{ transform: 'translateX(-50%) translateY(45%)' }}>
+            <div className="relative w-full h-full">
+              <div className="absolute inset-0 bg-teal-500/20 rounded-full blur-[110px] opacity-30 animate-pulse"></div>
+              <div className="absolute inset-16 bg-cyan-400/25 rounded-full blur-[90px] opacity-40 animate-pulse" style={{ animationDelay: '0.25s' }}></div>
+              <div className="absolute inset-32 bg-emerald-400/30 rounded-full blur-[70px] opacity-50 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+              <div className="absolute inset-48 bg-cyan-300/40 rounded-full blur-[50px] opacity-60"></div>
               </div>
             </div>
           </div>
@@ -2772,33 +2767,30 @@ Focus on the key sections and content, making it clean and modern.`;
           
           {/* Header */}
           <div className="absolute top-0 left-0 right-0 z-20 px-6 py-4 flex items-center justify-between animate-[fadeIn_0.8s_ease-out]">
-            <img
-              src="/firecrawl-logo-with-fire.webp"
-              alt="Firecrawl"
-              className="h-8 w-auto"
-            />
-            <a 
-              href="https://github.com/mendableai/open-lovable" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[#36322F] text-white px-3 py-2 rounded-[10px] text-sm font-medium [box-shadow:inset_0px_-2px_0px_0px_#171310,_0px_1px_6px_0px_rgba(58,_33,_8,_58%)] hover:translate-y-[1px] hover:scale-[0.98] hover:[box-shadow:inset_0px_-1px_0px_0px_#171310,_0px_1px_3px_0px_rgba(58,_33,_8,_40%)] active:translate-y-[2px] active:scale-[0.97] active:[box-shadow:inset_0px_1px_1px_0px_#171310,_0px_1px_2px_0px_rgba(58,_33,_8,_30%)] transition-all duration-200"
-            >
-              <FiGithub className="w-4 h-4" />
-              <span>Use this template</span>
-            </a>
+            <div className="flex items-center gap-3">
+              <svg viewBox="0 0 24 24" className="h-8 w-8 text-teal-300 drop-shadow-[0_0_12px_rgba(45,212,191,0.45)]" aria-hidden="true">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.75" fill="rgba(13,148,136,0.35)" />
+                <ellipse cx="12" cy="16.5" rx="7" ry="2.25" fill="currentColor" opacity="0.25" />
+              </svg>
+              <span className="text-teal-200/90 font-semibold text-lg tracking-tight">HoloWeb</span>
+              <span className="sr-only">HoloWeb</span>
+            </div>
+            {/* Removed GitHub link per rebrand */}
+            <div />
           </div>
           
           {/* Main content */}
           <div className="relative z-10 h-full flex items-center justify-center px-4">
             <div className="text-center max-w-4xl min-w-[600px] mx-auto">
               {/* Firecrawl-style Header */}
-              <div className="text-center">
-                <h1 className="text-[2.5rem] lg:text-[3.8rem] text-center text-[#36322F] font-semibold tracking-tight leading-[0.9] animate-[fadeIn_0.8s_ease-out]">
-                  <span className="hidden md:inline">Open Lovable</span>
-                  <span className="md:hidden">Open Lovable</span>
+              <div className="text-center text-teal-100">
+                <h1 className="text-[2.5rem] lg:text-[3.8rem] text-center text-teal-200/90 font-semibold tracking-tight leading-[0.9] animate-[fadeIn_0.8s_ease-out]">
+                  <span className="hidden md:inline">HoloWeb</span>
+                  <span className="md:hidden">HoloWeb</span>
                 </h1>
                 <motion.p 
-                  className="text-base lg:text-lg max-w-lg mx-auto mt-2.5 text-zinc-500 text-center text-balance"
+                  className="text-base lg:text-lg max-w-lg mx-auto mt-2.5 text-teal-100/70 text-center text-balance"
                   animate={{
                     opacity: showStyleSelector ? 0.7 : 1
                   }}
@@ -2828,11 +2820,11 @@ Focus on the key sections and content, making it clean and modern.`;
                       }
                     }}
                     placeholder=" "
-                    aria-placeholder="https://firecrawl.dev"
-                    className="h-[3.25rem] w-full resize-none focus-visible:outline-none focus-visible:ring-orange-500 focus-visible:ring-2 rounded-[18px] text-sm text-[#36322F] px-4 pr-12 border-[.75px] border-border bg-white"
+                    aria-placeholder="https://your-site.com"
+                    className="h-[3.25rem] w-full resize-none focus-visible:outline-none focus-visible:ring-teal-400 focus-visible:ring-2 rounded-[18px] text-sm text-white px-4 pr-12 border-[.75px] border-white/10 bg-white/10 backdrop-blur-md placeholder:text-white/40"
                     style={{
-                      boxShadow: '0 0 0 1px #e3e1de66, 0 1px 2px #5f4a2e14, 0 4px 6px #5f4a2e0a, 0 40px 40px -24px #684b2514',
-                      filter: 'drop-shadow(rgba(249, 224, 184, 0.3) -0.731317px -0.731317px 35.6517px)'
+                      boxShadow: '0 0 0 1px rgba(45,212,191,.25), 0 1px 2px rgba(0,0,0,.2), 0 10px 30px rgba(13,148,136,.25)',
+                      filter: 'drop-shadow(0px 0px 18px rgba(45,212,191,0.25))'
                     }}
                     autoFocus
                   />
@@ -2842,14 +2834,14 @@ Focus on the key sections and content, making it clean and modern.`;
                       homeUrlInput ? 'opacity-0' : 'opacity-100'
                     }`}
                   >
-                    <span className="text-[#605A57]/50" style={{ fontFamily: 'monospace' }}>
-                      https://firecrawl.dev
+                    <span className="text-teal-100/50" style={{ fontFamily: 'monospace' }}>
+                      https://your-site.com
                     </span>
                   </div>
                   <button
                     type="submit"
                     disabled={!homeUrlInput.trim()}
-                    className="absolute top-1/2 transform -translate-y-1/2 right-2 flex h-10 items-center justify-center rounded-md px-3 text-sm font-medium text-zinc-500 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="absolute top-1/2 transform -translate-y-1/2 right-2 flex h-10 items-center justify-center rounded-md px-3 text-sm font-medium text-teal-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title={selectedStyle ? `Clone with ${selectedStyle} Style` : 'Clone Website'}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
@@ -2865,8 +2857,8 @@ Focus on the key sections and content, making it clean and modern.`;
                       <div className={`transition-all duration-500 ease-out transform ${
                         showStyleSelector ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
                       }`}>
-                    <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-4 shadow-sm">
-                      <p className="text-sm text-gray-600 mb-3 font-medium">How do you want your site to look?</p>
+                    <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-[0_0_40px_rgba(45,212,191,0.15)]">
+                      <p className="text-sm text-teal-50/80 mb-3 font-medium">How do you want your site to look?</p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                         {[
                           { name: 'Neobrutalist', description: 'Bold colors, thick borders' },
@@ -2876,7 +2868,8 @@ Focus on the key sections and content, making it clean and modern.`;
                           { name: 'Gradient', description: 'Colorful gradients' },
                           { name: 'Retro', description: '80s/90s aesthetic' },
                           { name: 'Modern', description: 'Contemporary design' },
-                          { name: 'Monochrome', description: 'Black and white' }
+                          { name: 'Monochrome', description: 'Black and white' },
+                          { name: 'Neon Teal', description: 'HoloWeb default' }
                         ].map((style) => (
                           <button
                             key={style.name}
@@ -2907,14 +2900,14 @@ Focus on the key sections and content, making it clean and modern.`;
                                 setHomeContextInput(style.name.toLowerCase() + ' theme' + (currentAdditional ? ', ' + currentAdditional : ''));
                               }
                             }}
-                            className={`p-3 rounded-lg border transition-all ${
+                            className={`p-3 rounded-lg border transition-all backdrop-blur-md ${
                               selectedStyle === style.name
-                                ? 'border-orange-400 bg-orange-50 text-gray-900 shadow-sm'
-                                : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/50 text-gray-700'
+                                ? 'border-teal-400/70 bg-teal-400/10 text-teal-100 shadow-[0_0_0_1px_rgba(45,212,191,0.35)]'
+                                : 'border-white/10 bg-white/5 hover:border-teal-300/40 hover:bg-teal-300/10 text-white/80'
                             }`}
                           >
                             <div className="text-sm font-medium">{style.name}</div>
-                            <div className="text-xs text-gray-500 mt-1">{style.description}</div>
+                            <div className="text-xs text-white/60 mt-1">{style.description}</div>
                           </button>
                         ))}
                       </div>
@@ -2947,7 +2940,7 @@ Focus on the key sections and content, making it clean and modern.`;
                             }
                           }}
                           placeholder="Add more details: specific features, color preferences..."
-                          className="w-full px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all duration-200"
+                          className="w-full px-4 py-2 text-sm bg-white/10 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-teal-400/60 focus:ring-2 focus:ring-teal-300/20 transition-all duration-200 backdrop-blur-md"
                         />
                       </div>
                     </div>
@@ -2970,14 +2963,14 @@ Focus on the key sections and content, making it clean and modern.`;
                     }
                     router.push(`/?${params.toString()}`);
                   }}
-                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
+                  className="px-3 py-1.5 text-sm bg-white text-black border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
                   style={{
                     boxShadow: '0 0 0 1px #e3e1de66, 0 1px 2px #5f4a2e14'
                   }}
                 >
                   {appConfig.ai.availableModels.map(model => (
-                    <option key={model} value={model}>
-                      {appConfig.ai.modelDisplayNames[model] || model}
+                    <option key={model} value={model} className="text-black">
+                      {appConfig.ai.modelDisplayNames[model as keyof typeof appConfig.ai.modelDisplayNames] || model}
                     </option>
                   ))}
                 </select>
@@ -2987,13 +2980,17 @@ Focus on the key sections and content, making it clean and modern.`;
         </div>
       )}
       
-      <div className="bg-card px-4 py-4 border-b border-border flex items-center justify-between">
+      <div className="bg-black/40 backdrop-blur-md px-4 py-4 border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img
-            src="/firecrawl-logo-with-fire.webp"
-            alt="Firecrawl"
-            className="h-8 w-auto"
-          />
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 24 24" className="h-8 w-8 text-teal-300 drop-shadow-[0_0_12px_rgba(45,212,191,0.45)]" aria-hidden="true">
+              <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2.5" fill="none" />
+              <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.75" fill="rgba(13,148,136,0.35)" />
+              <ellipse cx="12" cy="16.5" rx="7" ry="2.25" fill="currentColor" opacity="0.25" />
+            </svg>
+            <span className="text-teal-200/90 font-semibold text-base tracking-tight">HoloWeb</span>
+            <span className="sr-only">HoloWeb</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {/* Model Selector - Left side */}
@@ -3009,11 +3006,11 @@ Focus on the key sections and content, making it clean and modern.`;
               }
               router.push(`/?${params.toString()}`);
             }}
-            className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
+            className="px-3 py-1.5 text-sm bg-white/10 text-white border border-white/10 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-teal-400/60 focus:border-transparent backdrop-blur-md"
           >
             {appConfig.ai.availableModels.map(model => (
-              <option key={model} value={model}>
-                {appConfig.ai.modelDisplayNames[model] || model}
+              <option key={model} value={model} className="text-black">
+                {appConfig.ai.modelDisplayNames[model as keyof typeof appConfig.ai.modelDisplayNames] || model}
               </option>
             ))}
           </select>
@@ -3049,9 +3046,9 @@ Focus on the key sections and content, making it clean and modern.`;
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
             </svg>
           </Button>
-          <div className="inline-flex items-center gap-2 bg-[#36322F] text-white px-3 py-1.5 rounded-[10px] text-sm font-medium [box-shadow:inset_0px_-2px_0px_0px_#171310,_0px_1px_6px_0px_rgba(58,_33,_8,_58%)]">
+          <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-100 px-3 py-1.5 rounded-[10px] text-sm font-medium border border-teal-300/30 backdrop-blur-md">
             <span id="status-text">{status.text}</span>
-            <div className={`w-2 h-2 rounded-full ${status.active ? 'bg-green-500' : 'bg-gray-500'}`} />
+            <div className={`w-2 h-2 rounded-full ${status.active ? 'bg-teal-400' : 'bg-gray-500'}`} />
           </div>
         </div>
       </div>
@@ -3151,8 +3148,8 @@ Focus on the key sections and content, making it clean and modern.`;
                   
                       {/* Show applied files if this is an apply success message */}
                       {msg.metadata?.appliedFiles && msg.metadata.appliedFiles.length > 0 && (
-                    <div className="mt-2 inline-block bg-gray-100 rounded-[10px] p-3">
-                      <div className="text-xs font-medium mb-1 text-gray-700">
+                    <div className="mt-2 inline-block bg-white/5 border border-white/10 text-teal-50 rounded-[10px] p-3 backdrop-blur-md">
+                      <div className="text-xs font-medium mb-1 text-teal-100/80">
                         {msg.content.includes('Applied') ? 'Files Updated:' : 'Generated Files:'}
                       </div>
                       <div className="flex flex-wrap items-start gap-1">
@@ -3185,8 +3182,8 @@ Focus on the key sections and content, making it clean and modern.`;
                   
                       {/* Show generated files for completion messages - but only if no appliedFiles already shown */}
                       {isGenerationComplete && generationProgress.files.length > 0 && idx === chatMessages.length - 1 && !msg.metadata?.appliedFiles && !chatMessages.some(m => m.metadata?.appliedFiles) && (
-                    <div className="mt-2 inline-block bg-gray-100 rounded-[10px] p-3">
-                      <div className="text-xs font-medium mb-1 text-gray-700">Generated Files:</div>
+                    <div className="mt-2 inline-block bg-white/5 border border-white/10 text-teal-50 rounded-[10px] p-3 backdrop-blur-md">
+                      <div className="text-xs font-medium mb-1 text-teal-100/80">Generated Files:</div>
                       <div className="flex flex-wrap items-start gap-1">
                         {generationProgress.files.map((file, fileIdx) => (
                           <div
@@ -3228,7 +3225,7 @@ Focus on the key sections and content, making it clean and modern.`;
                   {generationProgress.files.map((file, idx) => (
                     <div
                       key={`file-${idx}`}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-[#36322F] text-white rounded-[10px] text-xs animate-fade-in-up"
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-teal-500/20 text-teal-100 border border-teal-300/30 backdrop-blur-md rounded-[10px] text-xs animate-fade-in-up"
                       style={{ animationDelay: `${idx * 30}ms` }}
                     >
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
