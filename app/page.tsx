@@ -478,6 +478,17 @@ Tip: I automatically detect and install npm packages from your code imports (lik
     }
   };
 
+  // Load the iframe once the sandbox URL is healthy and we're not loading
+  useEffect(() => {
+    if (!sandboxReady || !sandboxData?.url || loading) return;
+    const t = setTimeout(() => {
+      if (iframeRef.current) {
+        iframeRef.current.src = `${sandboxData.url}?t=${Date.now()}&initial=true`;
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [sandboxReady, sandboxData?.url, loading]);
+
   const displayStructure = (structure: any) => {
     if (typeof structure === 'object') {
       setStructureContent(JSON.stringify(structure, null, 2));
@@ -1423,16 +1434,6 @@ Tip: I automatically detect and install npm packages from your code imports (lik
       
       // Show sandbox iframe only when not in any loading state
       if (sandboxData?.url && !loading) {
-        // Only load iframe after health check marks sandbox as ready
-        useEffect(() => {
-          if (!sandboxReady) return;
-          const t = setTimeout(() => {
-            if (iframeRef.current) {
-              iframeRef.current.src = `${sandboxData.url}?t=${Date.now()}&initial=true`;
-            }
-          }, 300);
-          return () => clearTimeout(t);
-        }, [sandboxData?.url, sandboxReady]);
         return (
           <div className="relative w-full h-full">
             <iframe
