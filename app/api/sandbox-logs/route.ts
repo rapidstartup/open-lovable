@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const result = await global.activeSandbox.runCode(`
 import subprocess
 import os
+import json
 
 # Try to get the Vite process output
 try:

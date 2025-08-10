@@ -15,6 +15,17 @@ export async function POST() {
   let sandbox: any = null;
 
   try {
+    // Ensure required env is present early to fail fast on misconfiguration
+    if (!process.env.E2B_API_KEY) {
+      console.error('[create-ai-sandbox] Missing E2B_API_KEY');
+      return NextResponse.json(
+        {
+          error: 'Server not configured: missing E2B_API_KEY',
+        },
+        { status: 500 }
+      );
+    }
+
     console.log('[create-ai-sandbox] Creating base sandbox...');
     
     // Kill existing sandbox if any
@@ -228,72 +239,31 @@ print('\\nAll files created successfully!')
     // Execute the setup script
     await sandbox.runCode(setupScript);
     
-    // Install dependencies
-    console.log('[create-ai-sandbox] Installing dependencies...');
-    await sandbox.runCode(`
-import subprocess
-import sys
-
-print('Installing npm packages...')
-result = subprocess.run(
-    ['npm', 'install'],
-    cwd='/home/user/app',
-    capture_output=True,
-    text=True
-)
-
-if result.returncode == 0:
-    print('✓ Dependencies installed successfully')
-else:
-    print(f'⚠ Warning: npm install had issues: {result.stderr}')
-    # Continue anyway as it might still work
-    `);
-    
-    // Start Vite dev server
-    console.log('[create-ai-sandbox] Starting Vite dev server...');
+    // Install dependencies and start Vite dev server asynchronously to avoid platform timeouts
+    console.log('[create-ai-sandbox] Starting async setup (npm install && npm run dev)...');
     await sandbox.runCode(`
 import subprocess
 import os
+import signal
 import time
 
 os.chdir('/home/user/app')
 
-# Kill any existing Vite processes
+# Best-effort: kill any existing vite
 subprocess.run(['pkill', '-f', 'vite'], capture_output=True)
-time.sleep(1)
 
-# Start Vite dev server
-env = os.environ.copy()
-env['FORCE_COLOR'] = '0'
-
+# Run install + dev in background so the API can return immediately
+cmd = 'npm install && npm run dev'
 process = subprocess.Popen(
-    ['npm', 'run', 'dev'],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    env=env
+    cmd,
+    shell=True,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+    preexec_fn=os.setsid if hasattr(os, 'setsid') else None
 )
 
-print(f'✓ Vite dev server started with PID: {process.pid}')
-print('Waiting for server to be ready...')
-    `);
-    
-    // Wait for Vite to be fully ready
-    await new Promise(resolve => setTimeout(resolve, appConfig.e2b.viteStartupDelay));
-    
-    // Force Tailwind CSS to rebuild by touching the CSS file
-    await sandbox.runCode(`
-import os
-import time
-
-# Touch the CSS file to trigger rebuild
-css_file = '/home/user/app/src/index.css'
-if os.path.exists(css_file):
-    os.utime(css_file, None)
-    print('✓ Triggered CSS rebuild')
-    
-# Also ensure PostCSS processes it
-time.sleep(2)
-print('✓ Tailwind CSS should be loaded')
+print(f"✓ Background setup started with PID: {process.pid}")
+time.sleep(1)
     `);
 
     // Store sandbox globally

@@ -9,6 +9,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Use Firecrawl API to capture screenshot
+    if (!process.env.FIRECRAWL_API_KEY) {
+      return NextResponse.json({ error: 'Server not configured: missing FIRECRAWL_API_KEY' }, { status: 500 });
+    }
+
     const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
@@ -18,8 +22,8 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         url,
         formats: ['screenshot'], // Regular viewport screenshot, not full page
-        waitFor: 3000, // Wait for page to fully load
-        timeout: 30000,
+        waitFor: 2000, // shorten to reduce platform timeouts
+        timeout: 15000,
         blockAds: true,
         actions: [
           {

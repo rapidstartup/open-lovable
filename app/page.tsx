@@ -370,8 +370,18 @@ function AISandboxPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
       });
-      
-      const data = await response.json();
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`[createSandbox] ${response.status} ${errorText}`);
+      }
+
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('[createSandbox] Invalid JSON response');
+      }
       console.log('[createSandbox] Response data:', data);
       
       if (data.success) {
@@ -2312,8 +2322,18 @@ Focus on the key sections and content, making it clean and modern while preservi
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
-      
-      const data = await response.json();
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`[screenshot] ${response.status} ${errorText}`);
+      }
+
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('[screenshot] Invalid JSON response');
+      }
       if (data.success && data.screenshot) {
         setUrlScreenshot(data.screenshot);
         // Set preparing design state
