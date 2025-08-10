@@ -356,6 +356,26 @@ function AISandboxPageInner() {
     }
   };
 
+  const [sandboxReady, setSandboxReady] = useState(false);
+
+  const waitForSandboxReady = async (maxWaitMs = 30000, intervalMs = 1000) => {
+    const start = Date.now();
+    while (Date.now() - start < maxWaitMs) {
+      try {
+        const response = await fetch('/api/sandbox-status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.active && data?.healthy && data?.sandboxData?.url) {
+            setSandboxReady(true);
+            return data.sandboxData.url as string;
+          }
+        }
+      } catch {}
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+    return null;
+  };
+
   const createSandbox = async (fromHomeScreen = false) => {
     console.log('[createSandbox] Starting sandbox creation...');
     setLoading(true);
@@ -363,6 +383,7 @@ function AISandboxPageInner() {
     updateStatus('Creating sandbox...', false);
     setResponseArea([]);
     setScreenshotError(null);
+    setSandboxReady(false);
     
     try {
       const response = await fetch('/api/create-ai-sandbox', {
@@ -409,25 +430,32 @@ function AISandboxPageInner() {
         // Fetch sandbox files after creation
         setTimeout(fetchSandboxFiles, 1000);
         
-        // Restart Vite server to ensure it's running
+        // First, wait for the sandbox URL to become healthy; only if it doesn't, try forcing a restart
         setTimeout(async () => {
-          try {
-            console.log('[createSandbox] Ensuring Vite server is running...');
-            const restartResponse = await fetch('/api/restart-vite', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (restartResponse.ok) {
-              const restartData = await restartResponse.json();
-              if (restartData.success) {
-                console.log('[createSandbox] Vite server started successfully');
+          let healthyUrl = await waitForSandboxReady();
+          if (!healthyUrl) {
+            try {
+              console.log('[createSandbox] Dev server not ready yet, attempting restart...');
+              const restartResponse = await fetch('/api/restart-vite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+              });
+              if (restartResponse.ok) {
+                const restartData = await restartResponse.json();
+                if (restartData.success) {
+                  console.log('[createSandbox] Vite server restarted');
+                }
               }
+            } catch (error) {
+              console.error('[createSandbox] Error restarting Vite server:', error);
             }
-          } catch (error) {
-            console.error('[createSandbox] Error starting Vite server:', error);
+            // Wait again after restart
+            healthyUrl = await waitForSandboxReady();
           }
-        }, 2000);
+          if (healthyUrl && iframeRef.current) {
+            iframeRef.current.src = `${healthyUrl}?t=${Date.now()}&ready=true`;
+          }
+        }, 500);
         
         // Only add welcome message if not coming from home screen
         if (!fromHomeScreen) {
@@ -436,11 +464,7 @@ function AISandboxPageInner() {
 Tip: I automatically detect and install npm packages from your code imports (like react-router-dom, axios, etc.)`, 'system');
         }
         
-        setTimeout(() => {
-          if (iframeRef.current) {
-            iframeRef.current.src = data.url;
-          }
-        }, 100);
+        // Do not set the iframe immediately; it will be set after health check above
       } else {
         throw new Error(data.error || 'Unknown error');
       }
@@ -1399,11 +1423,21 @@ Tip: I automatically detect and install npm packages from your code imports (lik
       
       // Show sandbox iframe only when not in any loading state
       if (sandboxData?.url && !loading) {
+        // Only load iframe after health check marks sandbox as ready
+        useEffect(() => {
+          if (!sandboxReady) return;
+          const t = setTimeout(() => {
+            if (iframeRef.current) {
+              iframeRef.current.src = `${sandboxData.url}?t=${Date.now()}&initial=true`;
+            }
+          }, 300);
+          return () => clearTimeout(t);
+        }, [sandboxData?.url, sandboxReady]);
         return (
           <div className="relative w-full h-full">
             <iframe
               ref={iframeRef}
-              src={sandboxData.url}
+              src={"about:blank"}
               className="w-full h-full border-none"
               title="Open Lovable Sandbox"
               allow="clipboard-write"
@@ -3238,16 +3272,16 @@ Focus on the key sections and content, making it clean and modern.`;
             
             {/* File generation progress - inline display (during generation) */}
             {generationProgress.isGenerating && (
-              <div className="inline-block bg-gray-100 rounded-lg p-3">
-                <div className="text-sm font-medium mb-2 text-gray-700">
+                <div className="inline-block bg-[#0f1a24] border border-white/10 rounded-lg p-3 text-teal-50">
+                  <div className="text-sm font-medium mb-2 text-teal-100/80">
                   {generationProgress.status}
                 </div>
                 <div className="flex flex-wrap items-start gap-1">
                   {/* Show completed files */}
-                  {generationProgress.files.map((file, idx) => (
+                    {generationProgress.files.map((file, idx) => (
                     <div
                       key={`file-${idx}`}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-teal-500/20 text-teal-100 border border-teal-300/30 backdrop-blur-md rounded-[10px] text-xs animate-fade-in-up"
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-teal-500/20 text-teal-50 border border-teal-300/30 backdrop-blur-md rounded-[10px] text-xs animate-fade-in-up"
                       style={{ animationDelay: `${idx * 30}ms` }}
                     >
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3259,7 +3293,7 @@ Focus on the key sections and content, making it clean and modern.`;
                   
                   {/* Show current file being generated */}
                   {generationProgress.currentFile && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-[#36322F]/70 text-white rounded-[10px] text-xs animate-pulse"
+                      <div className="flex items-center gap-1 px-2 py-1 bg-[#36322F]/70 text-teal-50 rounded-[10px] text-xs animate-pulse"
                       style={{ animationDelay: `${generationProgress.files.length * 30}ms` }}>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       {generationProgress.currentFile.path.split('/').pop()}
@@ -3268,20 +3302,20 @@ Focus on the key sections and content, making it clean and modern.`;
                 </div>
                 
                 {/* Live streaming response display */}
-                {generationProgress.streamedCode && (
-                  <motion.div 
+            {generationProgress.streamedCode && (
+              <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="mt-3 border-t border-gray-300 pt-3"
+                className="mt-3 border-t border-white/10 pt-3"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-xs font-medium text-gray-600">AI Response Stream</span>
+                    <span className="text-xs font-medium text-teal-100/80">AI Response Stream</span>
                       </div>
-                      <div className="flex-1 h-px bg-gradient-to-r from-gray-300 to-transparent" />
+                  <div className="flex-1 h-px bg-gradient-to-r from-white/20 to-transparent" />
                     </div>
                     <div className="bg-gray-900 border border-gray-700 rounded max-h-32 overflow-y-auto scrollbar-hide">
                       <SyntaxHighlighter

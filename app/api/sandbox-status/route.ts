@@ -16,14 +16,30 @@ export async function GET() {
     
     if (sandboxExists && global.activeSandbox) {
       try {
-        // Since Python isn't available in the Vite template, just check if sandbox exists
-        // The sandbox object existing is enough to confirm it's healthy
-        sandboxHealthy = true;
+        // Verify the dev server is actually responding
+        const url = global.sandboxData?.url as string | undefined;
+        let statusCode: number | undefined;
+        if (url) {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 4000);
+          try {
+            const resp = await fetch(url, { method: 'GET', signal: controller.signal });
+            statusCode = resp.status;
+            sandboxHealthy = resp.ok;
+          } catch {
+            sandboxHealthy = false;
+          } finally {
+            clearTimeout(timeout);
+          }
+        } else {
+          sandboxHealthy = false;
+        }
         sandboxInfo = {
           sandboxId: global.sandboxData?.sandboxId,
           url: global.sandboxData?.url,
           filesTracked: global.existingFiles ? Array.from(global.existingFiles) : [],
-          lastHealthCheck: new Date().toISOString()
+          lastHealthCheck: new Date().toISOString(),
+          statusCode
         };
       } catch (error) {
         console.error('[sandbox-status] Health check failed:', error);
