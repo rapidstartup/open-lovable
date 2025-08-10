@@ -12,35 +12,42 @@ export async function POST(req: NextRequest) {
     if (!process.env.FIRECRAWL_API_KEY) {
       return NextResponse.json({ error: 'Server not configured: missing FIRECRAWL_API_KEY' }, { status: 500 });
     }
-
-    const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.FIRECRAWL_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    
+    async function attemptScreenshot(params: { waitFor: number; timeout: number; addWaitAction?: boolean }) {
+      const payload: any = {
         url,
-        formats: ['screenshot'], // Regular viewport screenshot, not full page
-        waitFor: 2000, // shorten to reduce platform timeouts
-        timeout: 15000,
+        formats: ['screenshot'],
+        waitFor: params.waitFor,
+        timeout: params.timeout,
         blockAds: true,
-        actions: [
-          {
-            type: 'wait',
-            milliseconds: 2000 // Additional wait for dynamic content
-          }
-        ]
-      })
-    });
+      };
+      if (params.addWaitAction) {
+        payload.actions = [{ type: 'wait', milliseconds: Math.min(2000, params.waitFor) }];
+      }
+      const resp = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      return resp;
+    }
 
+    // Try fast path first, then a slower retry if Firecrawl needs more time
+    let firecrawlResponse = await attemptScreenshot({ waitFor: 1000, timeout: 20000, addWaitAction: false });
     if (!firecrawlResponse.ok) {
-      const error = await firecrawlResponse.text();
-      throw new Error(`Firecrawl API error: ${error}`);
+      const errText = await firecrawlResponse.text().catch(() => '');
+      // Retry once with longer timeout, no extra waits to fit platform limits
+      firecrawlResponse = await attemptScreenshot({ waitFor: 0, timeout: 35000, addWaitAction: false });
+      if (!firecrawlResponse.ok) {
+        const retryErrText = await firecrawlResponse.text().catch(() => '');
+        throw new Error(`Firecrawl API error: ${retryErrText || errText}`);
+      }
     }
 
     const data = await firecrawlResponse.json();
-    
     if (!data.success || !data.data?.screenshot) {
       throw new Error('Failed to capture screenshot');
     }
