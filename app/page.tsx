@@ -2245,6 +2245,12 @@ Focus on the key sections and content, making it clean and modern while preservi
                     ...prev,
                     lastGeneratedCode: generatedCode
                   }));
+                } else if (data.type === 'error') {
+                  throw new Error(data.error || data.message || 'AI generation error');
+                } else if (data.type === 'warning') {
+                  if (data.message) {
+                    addChatMessage(data.message, 'system');
+                  }
                 }
               } catch (e) {
                 console.error('Error parsing streaming data:', e);
@@ -2690,6 +2696,12 @@ Focus on the key sections and content, making it clean and modern.`;
                     ...prev,
                     lastGeneratedCode: generatedCode
                   }));
+                } else if (data.type === 'error') {
+                  throw new Error(data.error || data.message || 'AI generation error');
+                } else if (data.type === 'warning') {
+                  if (data.message) {
+                    addChatMessage(data.message, 'system');
+                  }
                 }
               } catch (e) {
                 console.error('Failed to parse SSE data:', e);
@@ -3058,6 +3070,7 @@ Focus on the key sections and content, making it clean and modern.`;
             className="gap-2"
             onClick={() => {
               try {
+                setHomeUrlInput('');
                 setHomeScreenFading(false);
                 setShowHomeScreen(true);
                 const params = new URLSearchParams(searchParams);
