@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Allow longer processing time for scraping to avoid 504s during cold starts
+export const maxDuration = 60; // seconds
+
 // Function to sanitize smart quotes and other problematic characters
 function sanitizeQuotes(text: string): string {
   return text
@@ -44,14 +47,14 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         url,
         formats: ['markdown', 'html'],
-        waitFor: 3000,
-        timeout: 30000,
+        waitFor: 1500,
+        timeout: 25000,
         blockAds: true,
         maxAge: 3600000, // Use cached data if less than 1 hour old (500% faster!)
         actions: [
           {
             type: 'wait',
-            milliseconds: 2000
+            milliseconds: 1000
           }
         ]
       })

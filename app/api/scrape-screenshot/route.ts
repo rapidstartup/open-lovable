@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Allow longer processing time for screenshot capture to avoid 504s
+export const maxDuration = 60; // seconds
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
@@ -35,12 +38,12 @@ export async function POST(req: NextRequest) {
       return resp;
     }
 
-    // Try fast path first, then a slower retry if Firecrawl needs more time
-    let firecrawlResponse = await attemptScreenshot({ waitFor: 1000, timeout: 20000, addWaitAction: false });
+    // Try fast path first, then a moderate retry if Firecrawl needs more time
+    let firecrawlResponse = await attemptScreenshot({ waitFor: 500, timeout: 15000, addWaitAction: false });
     if (!firecrawlResponse.ok) {
       const errText = await firecrawlResponse.text().catch(() => '');
-      // Retry once with longer timeout, no extra waits to fit platform limits
-      firecrawlResponse = await attemptScreenshot({ waitFor: 0, timeout: 35000, addWaitAction: false });
+      // Retry once with a bit longer timeout, still under typical platform limits
+      firecrawlResponse = await attemptScreenshot({ waitFor: 0, timeout: 25000, addWaitAction: false });
       if (!firecrawlResponse.ok) {
         const retryErrText = await firecrawlResponse.text().catch(() => '');
         throw new Error(`Firecrawl API error: ${retryErrText || errText}`);
