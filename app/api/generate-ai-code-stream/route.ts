@@ -1236,7 +1236,22 @@ It's better to have 3 complete files than 10 incomplete files.`
           };
         }
         
-        const result = await streamText(streamOptions);
+        // Add timeout configuration to prevent hanging requests
+        const timeoutMs = appConfig.ai.generation.getTimeoutForModel(model);
+        console.log(`[generate-ai-code-stream] Using timeout: ${timeoutMs}ms for model: ${model}`);
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`AI generation timed out after ${timeoutMs}ms. This can happen with GPT-5 models due to high reasoning effort. Try using a different model or breaking down your request into smaller parts.`));
+          }, timeoutMs);
+        });
+        
+        // Race between the AI generation and timeout
+        const result = await Promise.race([
+          streamText(streamOptions),
+          timeoutPromise
+        ]) as Awaited<ReturnType<typeof streamText>>;
         
         // Stream the response and parse in real-time
         let generatedCode = '';
@@ -1599,9 +1614,23 @@ Provide the complete file content without any truncation. Include all necessary 
                   temperature: isOpenAI ? undefined : appConfig.ai.defaultTemperature
                 });
                 
+                // Add timeout for truncation recovery
+                const recoveryTimeoutMs = 120000; // 2 minutes for recovery
+                const recoveryTimeoutPromise = new Promise((_, reject) => {
+                  setTimeout(() => {
+                    reject(new Error(`Truncation recovery timed out after ${recoveryTimeoutMs}ms`));
+                  }, recoveryTimeoutMs);
+                });
+                
+                // Race between completion and timeout
+                const timedCompletionResult = await Promise.race([
+                  completionResult,
+                  recoveryTimeoutPromise
+                ]) as Awaited<ReturnType<typeof streamText>>;
+                
                 // Get the full text from the stream
                 let completedContent = '';
-                for await (const chunk of completionResult.textStream) {
+                for await (const chunk of timedCompletionResult.textStream) {
                   completedContent += chunk;
                 }
                 
@@ -1688,8 +1717,20 @@ Provide the complete file content without any truncation. Include all necessary 
       } catch (error) {
         console.error('[generate-ai-code-stream] Stream processing error:', error);
         
+        // Check if it's a timeout error
+        if ((error as any).message?.includes('timed out')) {
+          console.error('[generate-ai-code-stream] Timeout error detected');
+          await sendProgress({ 
+            type: 'error', 
+            error: `Generation timed out. This commonly happens with GPT-5 models due to high reasoning effort. Try:
+1. Using a different model (Kimi K2 or Claude Sonnet 4)
+2. Breaking down your request into smaller parts
+3. Simplifying your prompt
+4. Waiting a moment and trying again`
+          });
+        }
         // Check if it's a tool validation error
-        if ((error as any).message?.includes('tool call validation failed')) {
+        else if ((error as any).message?.includes('tool call validation failed')) {
           console.error('[generate-ai-code-stream] Tool call validation error - this may be due to the AI model sending incorrect parameters');
           await sendProgress({ 
             type: 'warning', 

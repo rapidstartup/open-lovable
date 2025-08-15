@@ -394,7 +394,15 @@ function AISandboxPageInner() {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '');
-        throw new Error(`[createSandbox] ${response.status} ${errorText}`);
+        console.error('[createSandbox] API error:', response.status, errorText);
+        
+        if (response.status === 504) {
+          throw new Error('Sandbox creation timed out. The server is taking longer than expected to respond. Please try again.');
+        } else if (response.status === 500) {
+          throw new Error(`Server error: ${errorText || 'Unknown server error occurred'}`);
+        } else {
+          throw new Error(`Request failed: ${response.status} ${errorText}`);
+        }
       }
 
       let data: any;
@@ -470,9 +478,29 @@ Tip: I automatically detect and install npm packages from your code imports (lik
       }
     } catch (error: any) {
       console.error('[createSandbox] Error:', error);
-      updateStatus('Error', false);
-      log(`Failed to create sandbox: ${error.message}`, 'error');
-      addChatMessage(`Failed to create sandbox: ${error.message}`, 'system');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Provide more helpful error messages
+      if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        updateStatus('Sandbox creation timed out. Please try again.', false);
+        log('❌ Sandbox creation timed out. This can happen when the server is busy or experiencing high load.');
+        log('💡 Try again in a few moments, or contact support if the issue persists.');
+        addChatMessage('❌ Sandbox creation timed out. This can happen when the server is busy or experiencing high load. Please try again in a few moments.', 'system');
+      } else if (errorMessage.includes('E2B_API_KEY')) {
+        updateStatus('Server configuration error', false);
+        log('❌ Server configuration error: Missing E2B API key.');
+        log('💡 Please contact support to resolve this issue.');
+        addChatMessage('❌ Server configuration error: Missing E2B API key. Please contact support.', 'system');
+      } else {
+        updateStatus('Failed to create sandbox', false);
+        log(`❌ Failed to create sandbox: ${errorMessage}`);
+        log('💡 Please try again or contact support if the issue persists.');
+        addChatMessage(`❌ Failed to create sandbox: ${errorMessage}. Please try again or contact support if the issue persists.`, 'system');
+      }
+      
+      // Reset loading state
+      setShowLoadingBackground(false);
+      setHomeScreenFading(false);
     } finally {
       setLoading(false);
     }
@@ -1589,11 +1617,25 @@ Tip: I automatically detect and install npm packages from your code imports (lik
         })
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Add timeout handling for the response
+      const timeoutMs = aiModel.startsWith('openai/gpt-5') ? 300000 : 180000; // 5 min for GPT-5, 3 min for others
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Request timed out after ${timeoutMs}ms. This commonly happens with GPT-5 models due to high reasoning effort.`));
+        }, timeoutMs);
+      });
+      
+      // Race between response and timeout
+      const timedResponse = await Promise.race([
+        response,
+        timeoutPromise
+      ]) as Response;
+      
+      if (!timedResponse.ok) {
+        throw new Error(`HTTP error! status: ${timedResponse.status}`);
       }
       
-      const reader = response.body?.getReader();
+      const reader = timedResponse.body?.getReader();
       const decoder = new TextDecoder();
       let generatedCode = '';
       let explanation = '';
@@ -1892,7 +1934,18 @@ Tip: I automatically detect and install npm packages from your code imports (lik
       }, 1000); // Reduced from 3000ms to 1000ms
     } catch (error: any) {
       setChatMessages(prev => prev.filter(msg => msg.content !== 'Thinking...'));
-      addChatMessage(`Error: ${error.message}`, 'system');
+      
+      // Check if it's a timeout error
+      if (error.message?.includes('timed out')) {
+        addChatMessage(`Generation timed out. This commonly happens with GPT-5 models due to high reasoning effort. Try:
+1. Using a different model (Kimi K2 or Claude Sonnet 4)
+2. Breaking down your request into smaller parts
+3. Simplifying your prompt
+4. Waiting a moment and trying again`, 'system');
+      } else {
+        addChatMessage(`Error: ${error.message}`, 'system');
+      }
+      
       // Reset generation progress and switch back to preview on error
       setGenerationProgress({
         isGenerating: false,
@@ -2155,6 +2208,14 @@ Focus on the key sections and content, making it clean and modern while preservi
       // Switch to generation tab when starting
       setActiveTab('generation');
       
+      // Add timeout handling for the response
+      const timeoutMs = aiModel.startsWith('openai/gpt-5') ? 300000 : 180000; // 5 min for GPT-5, 3 min for others
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Request timed out after ${timeoutMs}ms. This commonly happens with GPT-5 models due to high reasoning effort.`));
+        }, timeoutMs);
+      });
+      
       const aiResponse = await fetch('/api/generate-ai-code-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2169,11 +2230,17 @@ Focus on the key sections and content, making it clean and modern while preservi
         })
       });
       
-      if (!aiResponse.ok) {
-        throw new Error(`AI generation failed: ${aiResponse.status}`);
+      // Race between response and timeout
+      const timedResponse = await Promise.race([
+        aiResponse,
+        timeoutPromise
+      ]) as Response;
+      
+      if (!timedResponse.ok) {
+        throw new Error(`AI generation failed: ${timedResponse.status}`);
       }
       
-      const reader = aiResponse.body?.getReader();
+      const reader = timedResponse.body?.getReader();
       const decoder = new TextDecoder();
       let generatedCode = '';
       let explanation = '';
@@ -2334,7 +2401,17 @@ Focus on the key sections and content, making it clean and modern while preservi
       }
       
     } catch (error: any) {
-      addChatMessage(`Failed to clone website: ${error.message}`, 'system');
+      // Check if it's a timeout error
+      if (error.message?.includes('timed out')) {
+        addChatMessage(`Website cloning timed out. This commonly happens with GPT-5 models due to high reasoning effort. Try:
+1. Using a different model (Kimi K2 or Claude Sonnet 4)
+2. Breaking down your request into smaller parts
+3. Simplifying your prompt
+4. Waiting a moment and trying again`, 'system');
+      } else {
+        addChatMessage(`Failed to clone website: ${error.message}`, 'system');
+      }
+      
       setUrlStatus([]);
       setIsPreparingDesign(false);
       // Clear all states on error
@@ -2529,6 +2606,14 @@ Focus on the key sections and content, making it clean and modern.`;
           lastProcessedPosition: 0
         }));
         
+        // Add timeout handling for the response
+        const timeoutMs = aiModel.startsWith('openai/gpt-5') ? 300000 : 180000; // 5 min for GPT-5, 3 min for others
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Request timed out after ${timeoutMs}ms. This commonly happens with GPT-5 models due to high reasoning effort.`));
+          }, timeoutMs);
+        });
+        
         const aiResponse = await fetch('/api/generate-ai-code-stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2543,11 +2628,17 @@ Focus on the key sections and content, making it clean and modern.`;
           })
         });
         
-        if (!aiResponse.ok || !aiResponse.body) {
+        // Race between response and timeout
+        const timedResponse = await Promise.race([
+          aiResponse,
+          timeoutPromise
+        ]) as Response;
+        
+        if (!timedResponse.ok || !timedResponse.body) {
           throw new Error('Failed to generate code');
         }
         
-        const reader = aiResponse.body.getReader();
+        const reader = timedResponse.body.getReader();
         const decoder = new TextDecoder();
         let generatedCode = '';
         let explanation = '';
@@ -2776,7 +2867,17 @@ Focus on the key sections and content, making it clean and modern.`;
           setActiveTab('preview');
         }, 1000); // Show completion briefly then switch
       } catch (error: any) {
-        addChatMessage(`Failed to clone website: ${error.message}`, 'system');
+        // Check if it's a timeout error
+        if (error.message?.includes('timed out')) {
+          addChatMessage(`Website cloning timed out. This commonly happens with GPT-5 models due to high reasoning effort. Try:
+1. Using a different model (Kimi K2 or Claude Sonnet 4)
+2. Breaking down your request into smaller parts
+3. Simplifying your prompt
+4. Waiting a moment and trying again`, 'system');
+        } else {
+          addChatMessage(`Failed to clone website: ${error.message}`, 'system');
+        }
+        
         setUrlStatus([]);
         setIsPreparingDesign(false);
         // Also clear generation progress on error

@@ -46,7 +46,7 @@ export async function POST() {
       global.existingFiles = new Set<string>();
     }
 
-    // Create base sandbox - we'll set up Vite ourselves for full control
+    // Create base sandbox with extended timeout
     console.log(`[create-ai-sandbox] Creating base E2B sandbox with ${appConfig.e2b.timeoutMinutes} minute timeout...`);
     sandbox = await Sandbox.create({ 
       apiKey: process.env.E2B_API_KEY,
@@ -60,9 +60,6 @@ export async function POST() {
     console.log(`[create-ai-sandbox] Sandbox host: ${host}`);
 
     // Set up a basic Vite React app using Python to write files
-    console.log('[create-ai-sandbox] Setting up Vite React app...');
-    
-    // Write all files in a single Python script to avoid multiple executions
     const setupScript = `
 import os
 import json
@@ -234,37 +231,89 @@ with open('/home/user/app/src/index.css', 'w') as f:
 print('✓ src/index.css')
 
 print('\\nAll files created successfully!')
-`;
+    `;
 
-    // Execute the setup script
-    await sandbox.runCode(setupScript);
+    // Execute the setup script with better error handling
+    console.log('[create-ai-sandbox] Setting up React app...');
+    const setupResult = await sandbox.runCode(setupScript);
     
-    // Install dependencies and start Vite dev server asynchronously to avoid platform timeouts
+    if (setupResult.exitCode !== 0) {
+      console.error('[create-ai-sandbox] Setup script failed:', setupResult.logs.stderr);
+      throw new Error('Failed to set up React app in sandbox');
+    }
+    
+    // Install dependencies and start Vite with better monitoring
     console.log('[create-ai-sandbox] Starting async setup (npm install && npm run dev)...');
-    await sandbox.runCode(`
+    const setupProcess = await sandbox.runCode(`
 import subprocess
 import os
 import signal
 import time
+import json
 
 os.chdir('/home/user/app')
 
 # Best-effort: kill any existing vite
 subprocess.run(['pkill', '-f', 'vite'], capture_output=True)
 
-# Run install + dev in background so the API can return immediately
-cmd = 'npm install && npm run dev'
-process = subprocess.Popen(
-    cmd,
+# Create a status file to track progress
+status_file = '/tmp/setup-status.json'
+with open(status_file, 'w') as f:
+    json.dump({"status": "starting", "step": "npm_install", "timestamp": time.time()}, f)
+
+# Run npm install first
+print("Starting npm install...")
+install_process = subprocess.Popen(
+    'npm install',
     shell=True,
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True
+)
+
+# Wait for install to complete
+install_return = install_process.wait()
+if install_return != 0:
+    with open(status_file, 'w') as f:
+        json.dump({"status": "failed", "step": "npm_install", "error": "npm install failed", "timestamp": time.time()}, f)
+    raise Exception("npm install failed")
+
+with open(status_file, 'w') as f:
+    json.dump({"status": "installing", "step": "vite_start", "timestamp": time.time()}, f)
+
+# Start Vite dev server
+print("Starting Vite dev server...")
+vite_process = subprocess.Popen(
+    'npm run dev',
+    shell=True,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
     preexec_fn=os.setsid if hasattr(os, 'setsid') else None
 )
 
-print(f"✓ Background setup started with PID: {process.pid}")
-time.sleep(1)
+# Store process info
+with open('/tmp/vite-process.pid', 'w') as f:
+    f.write(str(vite_process.pid))
+
+# Wait a bit for Vite to start
+time.sleep(3)
+
+# Check if Vite is running
+if vite_process.poll() is None:
+    with open(status_file, 'w') as f:
+        json.dump({"status": "running", "step": "vite_ready", "timestamp": time.time()}, f)
+    print(f"✓ Vite started successfully with PID: {vite_process.pid}")
+else:
+    with open(status_file, 'w') as f:
+        json.dump({"status": "failed", "step": "vite_start", "error": "Vite failed to start", "timestamp": time.time()}, f)
+    raise Exception("Vite failed to start")
     `);
+
+    if (setupProcess.exitCode !== 0) {
+      console.error('[create-ai-sandbox] Setup process failed:', setupProcess.logs.stderr);
+      throw new Error('Failed to start Vite dev server');
+    }
 
     // Store sandbox globally
     global.activeSandbox = sandbox;
@@ -302,34 +351,32 @@ time.sleep(1)
     global.existingFiles.add('vite.config.js');
     global.existingFiles.add('tailwind.config.js');
     global.existingFiles.add('postcss.config.js');
-    
-    console.log('[create-ai-sandbox] Sandbox ready at:', `https://${host}`);
+
+    console.log('[create-ai-sandbox] Sandbox setup completed successfully');
     
     return NextResponse.json({
       success: true,
       sandboxId,
       url: `https://${host}`,
-      message: 'Sandbox created and Vite React app initialized'
+      message: 'Sandbox created and configured successfully'
     });
 
   } catch (error) {
     console.error('[create-ai-sandbox] Error:', error);
     
-    // Clean up on error
+    // Clean up sandbox if creation failed
     if (sandbox) {
       try {
         await sandbox.kill();
       } catch (e) {
-        console.error('Failed to close sandbox on error:', e);
+        console.error('Failed to kill failed sandbox:', e);
       }
     }
     
-    return NextResponse.json(
-      { 
-        error: error instanceof Error ? error.message : 'Failed to create sandbox',
-        details: error instanceof Error ? error.stack : undefined
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: `Failed to create sandbox: ${(error as Error).message}`,
+      details: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
+    }, { status: 500 });
   }
 }

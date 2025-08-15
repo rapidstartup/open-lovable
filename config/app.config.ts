@@ -4,8 +4,8 @@
 export const appConfig = {
   // E2B Sandbox Configuration
   e2b: {
-    // Sandbox timeout in minutes
-    timeoutMinutes: 15,
+    // Sandbox timeout in minutes - increased for better reliability
+    timeoutMinutes: 20, // Increased from 15
     
     // Convert to milliseconds for E2B API
     get timeoutMs() {
@@ -15,8 +15,8 @@ export const appConfig = {
     // Vite development server port
     vitePort: 5173,
     
-    // Time to wait for Vite to be ready (in milliseconds)
-    viteStartupDelay: 7000,
+    // Time to wait for Vite to be ready (in milliseconds) - increased
+    viteStartupDelay: 10000, // Increased from 7000
     
     // Time to wait for CSS rebuild (in milliseconds)
     cssRebuildDelay: 2000,
@@ -52,6 +52,26 @@ export const appConfig = {
     
     // Max tokens for truncation recovery
     truncationRecoveryMaxTokens: 4000,
+    
+    // AI Generation timeout configuration
+    generation: {
+      // Base timeout for all models (milliseconds)
+      baseTimeoutMs: 120000, // 2 minutes
+      
+      // Extended timeout for GPT-5 models due to reasoning effort
+      gpt5TimeoutMs: 300000, // 5 minutes
+      
+      // Timeout for other models
+      otherModelsTimeoutMs: 180000, // 3 minutes
+      
+      // Get timeout for specific model
+      getTimeoutForModel(model: string): number {
+        if (model.startsWith('openai/gpt-5')) {
+          return this.gpt5TimeoutMs;
+        }
+        return this.otherModelsTimeoutMs;
+      }
+    }
   },
   
   // Code Application Configuration
@@ -141,12 +161,19 @@ export const appConfig = {
   
   // API Endpoints Configuration (for external services)
   api: {
-    // Retry configuration
+    // Retry configuration - improved
     maxRetries: 3,
     retryDelay: 1000, // milliseconds
     
-    // Request timeout (milliseconds)
-    requestTimeout: 30000,
+    // Request timeout (milliseconds) - increased for external APIs
+    requestTimeout: 60000, // Increased from 30000
+    
+    // Exponential backoff configuration
+    exponentialBackoff: {
+      baseDelay: 1000,
+      maxDelay: 30000,
+      multiplier: 2
+    }
   }
 };
 
