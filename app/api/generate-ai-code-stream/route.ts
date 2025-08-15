@@ -10,6 +10,9 @@ import { FileManifest } from '@/types/file-manifest';
 import type { ConversationState, ConversationMessage, ConversationEdit } from '@/types/conversation';
 import { appConfig } from '@/config/app.config';
 
+// Override Next.js default 30-second timeout for AI generation
+export const maxDuration = 300; // 5 minutes (300 seconds)
+
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
@@ -1184,7 +1187,7 @@ PACKAGE RULES:
 Examples of SYNTAX ERRORS (NEVER DO THIS):
 ❌ className="px-4 py-2 bg-blue-600 hover:bg-blue-7...
 ❌ <button className="btn btn-primary btn-...
-❌ const title = "Welcome to our...
+❌ const title = "Welcome to our..."
 ❌ import { useState, useEffect, ... } from 'react'
 
 Examples of CORRECT CODE (ALWAYS DO THIS):
@@ -1239,19 +1242,63 @@ It's better to have 3 complete files than 10 incomplete files.`
         // Add timeout configuration to prevent hanging requests
         const timeoutMs = appConfig.ai.generation.getTimeoutForModel(model);
         console.log(`[generate-ai-code-stream] Using timeout: ${timeoutMs}ms for model: ${model}`);
+        console.log(`[generate-ai-code-stream] Next.js maxDuration: 300 seconds (${300 * 1000}ms)`);
+        
+        // Add timeout to streamOptions for AI SDK
+        streamOptions.timeout = timeoutMs;
+        console.log(`[generate-ai-code-stream] Added timeout ${timeoutMs}ms to streamOptions`);
+        
+        // Add provider-specific timeout configurations
+        if (isOpenAI) {
+          streamOptions.openai = {
+            ...streamOptions.openai,
+            timeout: timeoutMs
+          };
+          console.log(`[generate-ai-code-stream] Added OpenAI-specific timeout: ${timeoutMs}ms`);
+        } else if (isAnthropic) {
+          streamOptions.anthropic = {
+            ...streamOptions.anthropic,
+            timeout: timeoutMs
+          };
+          console.log(`[generate-ai-code-stream] Added Anthropic-specific timeout: ${timeoutMs}ms`);
+        } else {
+          streamOptions.groq = {
+            ...streamOptions.groq,
+            timeout: timeoutMs
+          };
+          console.log(`[generate-ai-code-stream] Added Groq-specific timeout: ${timeoutMs}ms`);
+        }
         
         // Create a timeout promise
         const timeoutPromise = new Promise((_, reject) => {
+          const startTime = Date.now();
+          console.log(`[generate-ai-code-stream] Setting up timeout promise for ${timeoutMs}ms at ${new Date().toISOString()}`);
           setTimeout(() => {
+            const elapsed = Date.now() - startTime;
+            console.log(`[generate-ai-code-stream] Timeout triggered after ${elapsed}ms at ${new Date().toISOString()}`);
             reject(new Error(`AI generation timed out after ${timeoutMs}ms. This can happen with GPT-5 models due to high reasoning effort. Try using a different model or breaking down your request into smaller parts.`));
           }, timeoutMs);
         });
         
         // Race between the AI generation and timeout
-        const result = await Promise.race([
-          streamText(streamOptions),
-          timeoutPromise
-        ]) as Awaited<ReturnType<typeof streamText>>;
+        console.log(`[generate-ai-code-stream] Starting streamText call with timeout race...`);
+        console.log(`[generate-ai-code-stream] streamOptions:`, JSON.stringify(streamOptions, null, 2));
+        console.log(`[generate-ai-code-stream] Starting at: ${new Date().toISOString()}`);
+        
+        let result: Awaited<ReturnType<typeof streamText>>;
+        try {
+          result = await Promise.race([
+            streamText(streamOptions),
+            timeoutPromise
+          ]) as Awaited<ReturnType<typeof streamText>>;
+          console.log(`[generate-ai-code-stream] streamText call completed successfully at: ${new Date().toISOString()}`);
+        } catch (raceError) {
+          console.error(`[generate-ai-code-stream] Promise.race error:`, raceError);
+          console.error(`[generate-ai-code-stream] Race error type:`, typeof raceError);
+          console.error(`[generate-ai-code-stream] Race error message:`, (raceError as any).message);
+          console.error(`[generate-ai-code-stream] Race error stack:`, (raceError as any).stack);
+          throw raceError;
+        }
         
         // Stream the response and parse in real-time
         let generatedCode = '';
@@ -1266,10 +1313,16 @@ It's better to have 3 complete files than 10 incomplete files.`
         let tagBuffer = '';
         
         // Stream the response and parse for packages in real-time
+        console.log(`[generate-ai-code-stream] Starting to process text stream...`);
         for await (const textPart of result.textStream) {
           const text = textPart || '';
           generatedCode += text;
           currentFile += text;
+          
+          // Log first few chunks to verify streaming is working
+          if (generatedCode.length < 100) {
+            console.log(`[generate-ai-code-stream] First chunk received: ${text.length} chars, total: ${generatedCode.length}`);
+          }
           
           // Combine with buffer for tag detection
           const searchText = tagBuffer + text;
@@ -1371,6 +1424,7 @@ It's better to have 3 complete files than 10 incomplete files.`
         }
         
         console.log('\n\n[generate-ai-code-stream] Streaming complete.');
+        console.log(`[generate-ai-code-stream] Total generated code length: ${generatedCode.length} characters`);
         
         // Send any remaining conversational text
         if (conversationalBuffer.trim()) {
@@ -1716,6 +1770,9 @@ Provide the complete file content without any truncation. Include all necessary 
         
       } catch (error) {
         console.error('[generate-ai-code-stream] Stream processing error:', error);
+        console.error('[generate-ai-code-stream] Error type:', typeof error);
+        console.error('[generate-ai-code-stream] Error message:', (error as any).message);
+        console.error('[generate-ai-code-stream] Error stack:', (error as any).stack);
         
         // Check if it's a timeout error
         if ((error as any).message?.includes('timed out')) {
