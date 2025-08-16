@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  NODE_ENV = "production"
+  NEXT_TELEMETRY_DISABLED = "1"
 
 # Override Netlify's default timeout for serverless functions
 # The default is 10 seconds, but we need 5 minutes for GPT-5
@@ -22,8 +24,3 @@
 
 [functions."restart-vite"]
   timeout = 30
-
-# Environment variables for the build
-[build.environment]
-  NODE_ENV = "production"
-  NEXT_TELEMETRY_DISABLED = "1"
