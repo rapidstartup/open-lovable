@@ -10,12 +10,10 @@
 # Override Netlify's default timeout for serverless functions
 # The default is 10 seconds, but we need 5 minutes for GPT-5
 [functions]
-  # Set global timeout to 5 minutes (300 seconds)
-  timeout = 300
   # Use esbuild for better performance
   node_bundler = "esbuild"
 
-# Configure specific API routes with custom timeouts
+# Configure function timeouts using the correct Netlify syntax
 [functions."generate-ai-code-stream"]
   timeout = 300
 
