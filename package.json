@@ -11,6 +11,9 @@
     "test:integration": "node tests/e2b-integration.test.js",
     "test:api": "node tests/api-endpoints.test.js",
     "test:code": "node tests/code-execution.test.js",
+    "test:gpt5": "node test/gpt5-timeout-test.js",
+    "check:env": "node test/check-env.js",
+    "test:api-sim": "node test/api-route-simulation.js",
     "test:all": "npm run test:integration && npm run test:api && npm run test:code"
   },
   "dependencies": {

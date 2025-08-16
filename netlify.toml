@@ -1,0 +1,29 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Override Netlify's default timeout for serverless functions
+# The default is 10 seconds, but we need 5 minutes for GPT-5
+[functions]
+  # Set global timeout to 5 minutes (300 seconds)
+  timeout = 300
+  # Use esbuild for better performance
+  node_bundler = "esbuild"
+
+# Configure specific API routes with custom timeouts
+[functions."generate-ai-code-stream"]
+  timeout = 300
+
+[functions."scrape-screenshot"]
+  timeout = 60
+
+[functions."restart-vite"]
+  timeout = 30
+
+# Environment variables for the build
+[build.environment]
+  NODE_ENV = "production"
+  NEXT_TELEMETRY_DISABLED = "1"
