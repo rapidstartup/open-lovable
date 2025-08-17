@@ -8,6 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "deploy:cf": "wrangler pages deploy .next --project-name open-lovable",
+    "deploy:cf:dev": "wrangler pages dev .next --project-name open-lovable",
+    "deploy:cf:preview": "wrangler pages deploy .next --project-name open-lovable --branch preview",
+    "deploy:cf:staging": "wrangler pages deploy .next --project-name open-lovable --branch staging",
+    "test:deploy": "npm run build && npm run deploy:cf:dev",
+    "test:deploy:config": "node scripts/deploy-test.js",
     "test:integration": "node tests/e2b-integration.test.js",
     "test:api": "node tests/api-endpoints.test.js",
     "test:code": "node tests/code-execution.test.js",
@@ -55,9 +61,7 @@
     "eslint-config-next": "15.4.3",
     "lightningcss": "^1.25.0",
     "tailwindcss": "^4.1.11",
-    "typescript": "^5"
-  },
-  "overrides": {
-    "lightningcss": "1.25.0"
+    "typescript": "^5",
+    "wrangler": "^3.114.13"
   }
 }

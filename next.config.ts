@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Cloudflare Pages Functions compatibility
+  // Keep standard Next.js config for API routes
+  experimental: {
+    // Enable if you need server actions
+    // serverActions: false,
+  },
 };
 
 export default nextConfig;

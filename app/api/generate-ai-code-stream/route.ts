@@ -1230,11 +1230,11 @@ It's better to have 3 complete files than 10 incomplete files.`
           streamOptions.temperature = 0.7;
         }
         
-        // Add reasoning effort for GPT-5 models
+        // Add reasoning effort for GPT-5 models - use low for faster responses
         if (isOpenAI) {
           streamOptions.experimental_providerMetadata = {
             openai: {
-              reasoningEffort: 'high'
+              reasoningEffort: 'low' // Changed from 'high' to 'low' for faster responses
             }
           };
         }

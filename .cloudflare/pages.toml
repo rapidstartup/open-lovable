@@ -1,0 +1,22 @@
+# Cloudflare Pages configuration
+[build]
+command = "npm run build"
+output_directory = ".next"
+
+[build.environment]
+NODE_VERSION = "18"
+
+[functions]
+directory = "app/api"
+
+# Environment variables
+[vars]
+NODE_ENV = "production"
+
+# Routes configuration
+[[redirects]]
+from = "/api/*"
+to = "/api/:splat"
+status = 200
+
+

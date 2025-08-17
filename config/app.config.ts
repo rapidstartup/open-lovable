@@ -33,13 +33,15 @@ export const appConfig = {
     // Available models
     availableModels: [
       'openai/gpt-5',
+      'openai/gpt-4o',
       'moonshotai/kimi-k2-instruct',
       'anthropic/claude-sonnet-4-20250514'
     ],
     
     // Model display names
     modelDisplayNames: {
-      'openai/gpt-5': 'GPT-5',
+      'openai/gpt-5': 'GPT-5 (Reasoning)',
+      'openai/gpt-4o': 'GPT-4o (Fast)',
       'moonshotai/kimi-k2-instruct': 'Kimi K2 Instruct',
       'anthropic/claude-sonnet-4-20250514': 'Sonnet 4'
     },
@@ -58,8 +60,11 @@ export const appConfig = {
       // Base timeout for all models (milliseconds)
       baseTimeoutMs: 120000, // 2 minutes
       
-      // Extended timeout for GPT-5 models due to reasoning effort
-      gpt5TimeoutMs: 300000, // 5 minutes
+      // Reduced timeout for GPT-5 models to prevent hanging
+      gpt5TimeoutMs: 180000, // 3 minutes (reduced from 5)
+      
+      // Fast timeout for GPT-4o and similar models
+      fastModelsTimeoutMs: 120000, // 2 minutes
       
       // Timeout for other models
       otherModelsTimeoutMs: 180000, // 3 minutes
@@ -68,6 +73,9 @@ export const appConfig = {
       getTimeoutForModel(model: string): number {
         if (model.startsWith('openai/gpt-5')) {
           return this.gpt5TimeoutMs;
+        }
+        if (model.includes('gpt-4o') || model.includes('kimi') || model.includes('claude')) {
+          return this.fastModelsTimeoutMs;
         }
         return this.otherModelsTimeoutMs;
       }
