@@ -14,6 +14,8 @@ function sanitizeQuotes(text: string): string {
     .replace(/\u00A0/g, ' '); // Non-breaking space
 }
 
+export const runtime = 'edge';
+
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json();

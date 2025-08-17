@@ -4,6 +4,8 @@ declare global {
   var activeSandbox: any;
 }
 
+export const runtime = 'edge';
+
 export async function GET(request: NextRequest) {
   try {
     if (!global.activeSandbox) {

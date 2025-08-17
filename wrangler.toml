@@ -1,15 +1,31 @@
-# Cloudflare Pages configuration for open-lovable
+# Cloudflare Workers configuration for open-lovable
 name = "open-lovable"
+main = "dist/index.js"
 compatibility_date = "2024-08-16"
 compatibility_flags = ["nodejs_compat"]
 
-# Pages Functions configuration
-[functions]
-directory = "app/api"
-
-# Environment variables (will be set in Cloudflare dashboard)
+# Environment variables - these will be preserved across deployments
+# Set these in Cloudflare dashboard and they'll be available to your Worker
 [vars]
 NODE_ENV = "production"
+
+# Define environment variable placeholders (these won't overwrite dashboard values)
+# The actual values should be set in Cloudflare dashboard
+[env.production.vars]
+NODE_ENV = "production"
+
+# Add your API keys and other sensitive variables here
+# These are just placeholders - set real values in dashboard
+# ANTHROPIC_API_KEY = "your-api-key-here"
+# E2B_API_KEY = "your-e2b-key-here"
+# OPENAI_API_KEY = "your-openai-key-here"
+# GROQ_API_KEY = "your-groq-key-here"
+
+# Routes configuration
+# This tells Cloudflare how to route requests to your Worker
+[[routes]]
+pattern = "api.open-lovable.com/*"
+zone_name = "open-lovable.com"
 
 # KV namespaces (if needed later)
 # [[kv_namespaces]]
@@ -25,3 +41,4 @@ NODE_ENV = "production"
 # [[r2_buckets]]
 # binding = "MY_BUCKET"
 # bucket_name = "my-bucket"
+

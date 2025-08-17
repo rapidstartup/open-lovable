@@ -14,7 +14,10 @@
       "pattern": "/api/*",
       "function": "api"
     }
-  ]
+  ],
+  "deployment": {
+    "command": "npx wrangler pages deploy .next --project-name open-lovable"
+  }
 }
 
 

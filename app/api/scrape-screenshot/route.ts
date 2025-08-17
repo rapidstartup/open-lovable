@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 // Allow longer processing time for screenshot capture to avoid 504s
 export const maxDuration = 60; // seconds
 

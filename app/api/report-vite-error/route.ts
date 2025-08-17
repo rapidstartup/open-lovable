@@ -9,6 +9,8 @@ if (!global.viteErrors) {
   global.viteErrors = [];
 }
 
+export const runtime = 'edge';
+
 export async function POST(request: NextRequest) {
   try {
     const { error, file, type = 'runtime-error' } = await request.json();

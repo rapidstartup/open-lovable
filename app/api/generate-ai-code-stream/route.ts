@@ -13,6 +13,8 @@ import { appConfig } from '@/config/app.config';
 // Override Next.js default 30-second timeout for AI generation
 export const maxDuration = 300; // 5 minutes (300 seconds)
 
+export const runtime = 'edge';
+
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 });

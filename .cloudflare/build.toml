@@ -1,0 +1,15 @@
+# Cloudflare Pages Build Configuration
+[build]
+command = "npm run build"
+output_directory = ".next"
+
+[build.environment]
+NODE_VERSION = "18"
+
+# Functions configuration
+[functions]
+directory = "app/api"
+
+# Environment variables
+[vars]
+NODE_ENV = "production"

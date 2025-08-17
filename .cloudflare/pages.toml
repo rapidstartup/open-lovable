@@ -1,4 +1,4 @@
-# Cloudflare Pages configuration
+# Cloudflare Pages configuration for frontend
 [build]
 command = "npm run build"
 output_directory = ".next"
@@ -6,17 +6,14 @@ output_directory = ".next"
 [build.environment]
 NODE_VERSION = "18"
 
+# Functions configuration (if you want to use Pages Functions for some routes)
 [functions]
 directory = "app/api"
 
 # Environment variables
 [vars]
 NODE_ENV = "production"
-
-# Routes configuration
-[[redirects]]
-from = "/api/*"
-to = "/api/:splat"
-status = 200
+# Add your API keys here for frontend use (if needed)
+# ANTHROPIC_API_KEY = "your-api-key-here"
 
 
