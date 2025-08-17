@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 
 // Allow longer processing time for scraping to avoid 504s during cold starts
@@ -13,8 +15,6 @@ function sanitizeQuotes(text: string): string {
     .replace(/…/g, '...') // Ellipsis to three dots
     .replace(/\u00A0/g, ' '); // Non-breaking space
 }
-
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {

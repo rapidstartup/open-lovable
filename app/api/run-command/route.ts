@@ -1,7 +1,7 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { Sandbox } from '@e2b/code-interpreter';
-
-export const runtime = 'edge';
 
 // Get active sandbox from global state (in production, use a proper state management solution)
 declare global {

@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
-
 export const runtime = 'edge';
+
+import { NextResponse } from 'next/server';
 
 declare global {
   var viteErrorsCache: { errors: any[], timestamp: number } | null;

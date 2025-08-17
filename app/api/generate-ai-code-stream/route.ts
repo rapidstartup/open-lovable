@@ -1,8 +1,11 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createGroq } from '@ai-sdk/groq';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
+import { z } from 'zod';
 import type { SandboxState } from '@/types/sandbox';
 import { selectFilesForEdit, getFileContents, formatFilesForAI } from '@/lib/context-selector';
 import { executeSearchPlan, formatSearchResultsForAI, selectTargetFile } from '@/lib/file-search-executor';
@@ -12,8 +15,6 @@ import { appConfig } from '@/config/app.config';
 
 // Override Next.js default 30-second timeout for AI generation
 export const maxDuration = 300; // 5 minutes (300 seconds)
-
-export const runtime = 'edge';
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,

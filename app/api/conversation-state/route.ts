@@ -1,7 +1,7 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import type { ConversationState } from '@/types/conversation';
-
-export const runtime = 'edge';
 
 declare global {
   var conversationState: ConversationState | null;

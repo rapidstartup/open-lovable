@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
-import { parseJavaScriptFile, buildComponentTree } from '@/lib/file-parser';
-import { FileManifest, FileInfo, RouteInfo } from '@/types/file-manifest';
-import type { SandboxState } from '@/types/sandbox';
-
 export const runtime = 'edge';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { parseJavaScriptFile, buildComponentTree } from '@/lib/file-parser';
+import type { FileManifest, FileInfo, RouteInfo } from '@/types/file-manifest';
+import type { SandboxState } from '@/types/sandbox';
 
 declare global {
   var activeSandbox: any;
